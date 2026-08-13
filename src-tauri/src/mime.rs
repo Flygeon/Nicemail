@@ -25,8 +25,8 @@ pub fn parse_header(
 
     let subject = msg.subject().unwrap_or("").to_string();
     let from = extract_addresses(msg.from());
-    let to = extract_addresses(msg.to());
-    let cc = extract_addresses(msg.cc());
+    let to: Vec<String> = extract_addresses(msg.to()).into_iter().map(|(_, e)| e).collect();
+    let cc: Vec<String> = extract_addresses(msg.cc()).into_iter().map(|(_, e)| e).collect();
     let date = msg.date().map(dt_to_epoch).unwrap_or(0);
     let (from_name, from_email) = from.first().cloned().unwrap_or_default();
 
@@ -65,8 +65,8 @@ pub fn parse_full(
 
     let subject = msg.subject().unwrap_or("").to_string();
     let from = extract_addresses(msg.from());
-    let to = extract_addresses(msg.to());
-    let cc = extract_addresses(msg.cc());
+    let to: Vec<String> = extract_addresses(msg.to()).into_iter().map(|(_, e)| e).collect();
+    let cc: Vec<String> = extract_addresses(msg.cc()).into_iter().map(|(_, e)| e).collect();
     let date = msg.date().map(dt_to_epoch).unwrap_or(0);
     let (from_name, from_email) = from.first().cloned().unwrap_or_default();
 
@@ -285,7 +285,8 @@ fn extract_addresses(addr: Option<&Address<'_>>) -> Vec<(String, String)> {
 fn dt_to_epoch(dt: &DateTime) -> i64 {
     let sign = if dt.tz_before_gmt { -1i32 } else { 1i32 };
     let offset_secs = sign * (dt.tz_hour as i32 * 3600 + dt.tz_minute as i32 * 60);
-    let offset = chrono::FixedOffset::east_opt(offset_secs).unwrap_or_else(|| chrono::Utc.fix());
+    let offset = chrono::FixedOffset::east_opt(offset_secs)
+        .unwrap_or_else(|| chrono::FixedOffset::east_opt(0).expect("offset 0 is always valid"));
     let naive = chrono::NaiveDate::from_ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
         .and_then(|d| d.and_hms_opt(dt.hour as u32, dt.minute as u32, dt.second as u32));
     naive.and_then(|n| offset.from_local_datetime(&n).single())

@@ -2,7 +2,8 @@
 //! 465 端口 → 立即 TLS;587 → STARTTLS;其它端口且 smtpSsl=false → 明文。
 //! password 模式用 LOGIN;oauth2 模式用 XOAUTH2(secret 传 access token)。
 
-use lettre::message::{Attachment, ContentType, Mailbox, Message, MultiPart};
+use lettre::message::header::ContentType;
+use lettre::message::{Attachment, Mailbox, Message, MultiPart};
 use lettre::transport::smtp::authentication::{Credentials, Mechanism};
 use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::transport::smtp::SmtpTransport;
@@ -57,8 +58,9 @@ fn build_message(account: &AccountConfig, request: &SendRequest) -> Result<Messa
     }
 
     let alt = MultiPart::alternative_plain_html(request.body_text.clone(), request.body_html.clone());
-    let mut mixed = MultiPart::mixed();
-    mixed = mixed.multipart(alt);
+    // MultiPart::mixed() 返回 MultiPartBuilder,multipart(alt) 一步转成 MultiPart,
+    // 之后循环里的 singlepart 用的就是 MultiPart::singlepart(返回 Self)。
+    let mut mixed = MultiPart::mixed().multipart(alt);
 
     for att in &request.attachments {
         let data = std::fs::read(&att.path).map_err(Error::Io)?;
@@ -108,7 +110,7 @@ fn parse_mailbox(s: &str) -> Result<Mailbox, Error> {
 
 fn extract_message_id(msg: &Message, account: &AccountConfig) -> String {
     if let Some(id) = msg.headers().get::<lettre::message::header::MessageId>() {
-        id.to_string()
+        id.as_ref().to_string()
     } else {
         let domain = account
             .email

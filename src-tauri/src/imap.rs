@@ -47,30 +47,24 @@ pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
     tcp.set_write_timeout(Some(Duration::from_secs(120)))?;
 
     if account.imap_ssl {
-        let stream = tls.connect(&host, tcp)?;
+        let stream = tls
+            .connect(&host, tcp)
+            .map_err(|e| Error::Tls(e.into()))?;
         let mut client = Client::new(stream);
         client.read_greeting().map_err(Error::Imap)?;
         Ok(ImapClient::Tls(client))
     } else {
+        // STARTTLS 支持与否无需预查询:直接尝试 secure(),失败再回退明文重连
         let mut client = Client::new(tcp);
         client.read_greeting().map_err(Error::Imap)?;
-        let has_starttls = client
-            .capabilities()
-            .map(|c| c.has_str("STARTTLS"))
-            .unwrap_or(false);
-        if has_starttls {
-            match client.secure(&host, &tls) {
-                Ok(sec) => Ok(ImapClient::Tls(sec)),
-                Err(_) => {
-                    // 回退明文:重连
-                    let tcp2 = TcpStream::connect((host.as_str(), port))?;
-                    let mut c2 = Client::new(tcp2);
-                    c2.read_greeting().map_err(Error::Imap)?;
-                    Ok(ImapClient::Plain(c2))
-                }
+        match client.secure(&host, &tls) {
+            Ok(sec) => Ok(ImapClient::Tls(sec)),
+            Err(_) => {
+                let tcp2 = TcpStream::connect((host.as_str(), port))?;
+                let mut c2 = Client::new(tcp2);
+                c2.read_greeting().map_err(Error::Imap)?;
+                Ok(ImapClient::Plain(c2))
             }
-        } else {
-            Ok(ImapClient::Plain(client))
         }
     }
 }
@@ -134,7 +128,7 @@ pub fn list_folders(
 }
 
 fn list_folders_session<T: Read + Write>(session: &mut Session<T>) -> Result<Vec<Folder>, Error> {
-    let names = session.list("", "*").map_err(Error::Imap)?;
+    let names = session.list(None, Some("*")).map_err(Error::Imap)?;
     let mut folders = Vec::new();
     for name in names.iter() {
         let full_name = name.name().to_string();
@@ -496,7 +490,7 @@ fn folder_counts<T: Read + Write>(session: &mut Session<T>, folder: &str) -> (i6
 }
 
 fn find_folder<T: Read + Write>(session: &mut Session<T>, flag: &str) -> Option<String> {
-    if let Ok(names) = session.list("", "*") {
+    if let Ok(names) = session.list(None, Some("*")) {
         for n in names.iter() {
             if n.attributes().iter().any(|a| attr_has_flag(a, flag)) {
                 return Some(n.name().to_string());

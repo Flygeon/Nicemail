@@ -40,7 +40,7 @@ fn account_secret(account: &AccountConfig) -> Result<String, Error> {
 // ── 账号 ──
 
 #[tauri::command]
-async fn account_list() -> Result<Vec<AccountConfig>, String> {
+pub async fn account_list() -> Result<Vec<AccountConfig>, String> {
     let path = db_path();
     spawn(move || {
         let db = Db::open(&path)?;
@@ -50,7 +50,7 @@ async fn account_list() -> Result<Vec<AccountConfig>, String> {
 }
 
 #[tauri::command]
-async fn account_add(draft: AccountDraft) -> Result<AccountConfig, String> {
+pub async fn account_add(draft: AccountDraft) -> Result<AccountConfig, String> {
     spawn(move || account_add_impl(&draft)).await
 }
 
@@ -90,7 +90,7 @@ fn account_add_impl(draft: &AccountDraft) -> Result<AccountConfig, Error> {
 }
 
 #[tauri::command]
-async fn account_update(
+pub async fn account_update(
     account: AccountConfig,
     password: Option<String>,
 ) -> Result<AccountConfig, String> {
@@ -108,7 +108,7 @@ async fn account_update(
 }
 
 #[tauri::command]
-async fn account_delete(id: String) -> Result<(), String> {
+pub async fn account_delete(id: String) -> Result<(), String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         db.delete_account(&id)?;
@@ -119,7 +119,7 @@ async fn account_delete(id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn account_test(draft: AccountDraft) -> Result<TestResult, String> {
+pub async fn account_test(draft: AccountDraft) -> Result<TestResult, String> {
     spawn(move || Ok(account_test_impl(&draft))).await
 }
 
@@ -187,12 +187,12 @@ fn account_test_impl(draft: &AccountDraft) -> TestResult {
 // ── OAuth ──
 
 #[tauri::command]
-async fn oauth_config() -> Result<OAuthConfig, String> {
+pub async fn oauth_config() -> Result<OAuthConfig, String> {
     Ok(crate::oauth::oauth_config())
 }
 
 #[tauri::command]
-async fn oauth_start(app: tauri::AppHandle, provider: String) -> Result<OAuthStartResponse, String> {
+pub async fn oauth_start(app: tauri::AppHandle, provider: String) -> Result<OAuthStartResponse, String> {
     spawn(move || {
         let auth_url = crate::oauth::start_oauth(app, &provider)?;
         Ok(OAuthStartResponse { auth_url })
@@ -201,7 +201,7 @@ async fn oauth_start(app: tauri::AppHandle, provider: String) -> Result<OAuthSta
 }
 
 #[tauri::command]
-async fn oauth_finish(
+pub async fn oauth_finish(
     provider: String,
     code: String,
     state: String,
@@ -216,7 +216,7 @@ async fn oauth_finish(
 // ── 文件夹与邮件 ──
 
 #[tauri::command]
-async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> {
+pub async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -230,7 +230,7 @@ async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> {
 }
 
 #[tauri::command]
-async fn mail_sync(
+pub async fn mail_sync(
     app: tauri::AppHandle,
     account_id: String,
     folder: String,
@@ -278,7 +278,7 @@ async fn mail_sync(
 }
 
 #[tauri::command]
-async fn mail_list(
+pub async fn mail_list(
     account_id: String,
     folder: String,
     offset: i64,
@@ -292,7 +292,7 @@ async fn mail_list(
 }
 
 #[tauri::command]
-async fn mail_get(
+pub async fn mail_get(
     account_id: String,
     folder: String,
     uid: u32,
@@ -320,7 +320,7 @@ fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDeta
 }
 
 #[tauri::command]
-async fn mail_set_flag(
+pub async fn mail_set_flag(
     account_id: String,
     folder: String,
     uids: Vec<u32>,
@@ -340,7 +340,7 @@ async fn mail_set_flag(
 }
 
 #[tauri::command]
-async fn mail_move(
+pub async fn mail_move(
     account_id: String,
     folder: String,
     uids: Vec<u32>,
@@ -359,7 +359,7 @@ async fn mail_move(
 }
 
 #[tauri::command]
-async fn mail_delete(account_id: String, folder: String, uids: Vec<u32>) -> Result<(), String> {
+pub async fn mail_delete(account_id: String, folder: String, uids: Vec<u32>) -> Result<(), String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -373,7 +373,7 @@ async fn mail_delete(account_id: String, folder: String, uids: Vec<u32>) -> Resu
 }
 
 #[tauri::command]
-async fn mail_search(
+pub async fn mail_search(
     account_id: String,
     query: String,
     folder: Option<String>,
@@ -386,7 +386,7 @@ async fn mail_search(
 }
 
 #[tauri::command]
-async fn mail_attachment_save(
+pub async fn mail_attachment_save(
     account_id: String,
     folder: String,
     uid: u32,
@@ -424,7 +424,7 @@ async fn mail_attachment_save(
 // ── 发送 ──
 
 #[tauri::command]
-async fn mail_send(request: SendRequest) -> Result<MailSendResponse, String> {
+pub async fn mail_send(request: SendRequest) -> Result<MailSendResponse, String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -438,7 +438,7 @@ async fn mail_send(request: SendRequest) -> Result<MailSendResponse, String> {
 }
 
 #[tauri::command]
-async fn mail_save_draft(account_id: String, request: SendRequest) -> Result<(), String> {
+pub async fn mail_save_draft(account_id: String, request: SendRequest) -> Result<(), String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -455,7 +455,7 @@ async fn mail_save_draft(account_id: String, request: SendRequest) -> Result<(),
 // ── 设置 ──
 
 #[tauri::command]
-async fn settings_get() -> Result<HashMap<String, String>, String> {
+pub async fn settings_get() -> Result<HashMap<String, String>, String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         db.settings_get_all()
@@ -464,7 +464,7 @@ async fn settings_get() -> Result<HashMap<String, String>, String> {
 }
 
 #[tauri::command]
-async fn settings_set(key: String, value: String) -> Result<(), String> {
+pub async fn settings_set(key: String, value: String) -> Result<(), String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         db.settings_set(&key, &value)

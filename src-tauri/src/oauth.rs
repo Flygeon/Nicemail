@@ -104,8 +104,9 @@ pub fn start_oauth(app: tauri::AppHandle, provider: &str) -> Result<String, Erro
     let addr = format!("127.0.0.1:{PORT}");
     let server = tiny_http::Server::http(&addr)
         .map_err(|e| Error::OAuth(format!("启动本地回环服务器失败: {e}")))?;
+    let provider_owned = provider.to_string();
     let _ = std::thread::spawn(move || {
-        loopback_serve(app, server, provider.to_string(), token_url.to_string(), client_id);
+        loopback_serve(app, server, provider_owned, token_url.to_string(), client_id);
     });
 
     Ok(auth_url)
@@ -145,9 +146,9 @@ pub fn access_token_for(provider: &str) -> Result<String, Error> {
     let resp = ureq::post(token_url)
         .send_form(form)
         .map_err(|e| Error::OAuth(format!("刷新 token 失败: {e}")))?;
-    let mut body = String::new();
-    resp.body_mut()
-        .read_to_string(&mut body)
+    let body = resp
+        .body_mut()
+        .read_to_string()
         .map_err(|e| Error::OAuth(format!("读取刷新响应失败: {e}")))?;
     let json: serde_json::Value = serde_json::from_str(&body)
         .map_err(|e| Error::OAuth(format!("解析刷新响应失败: {e}")))?;
@@ -264,9 +265,9 @@ fn exchange_code(
     let resp = ureq::post(token_url)
         .send_form(form)
         .map_err(|e| Error::OAuth(format!("换取 token 失败: {e}")))?;
-    let mut body = String::new();
-    resp.body_mut()
-        .read_to_string(&mut body)
+    let body = resp
+        .body_mut()
+        .read_to_string()
         .map_err(|e| Error::OAuth(format!("读取 token 响应失败: {e}")))?;
     let json: serde_json::Value = serde_json::from_str(&body)
         .map_err(|e| Error::OAuth(format!("解析 token 响应失败: {e}")))?;
