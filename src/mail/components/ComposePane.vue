@@ -203,6 +203,7 @@ async function onSend(): Promise<void> {
   busy.value = true;
   try {
     await api.mailSend(req);
+    state.showToast(t('compose.sent'));
     actions.closeCompose();
   } catch (err) {
     showInfo(t('status.error'), t('compose.sendFailed', { message: String(err) }), 'Error');
@@ -218,7 +219,7 @@ async function onSaveDraft(): Promise<void> {
   busy.value = true;
   try {
     await api.mailSaveDraft(acc.id, req);
-    showInfo(t('status.success'), t('compose.draftSaved'), 'Success');
+    state.showToast(t('compose.draftSaved'));
   } catch (err) {
     showInfo(t('status.error'), t('compose.draftFailed', { message: String(err) }), 'Error');
   } finally {

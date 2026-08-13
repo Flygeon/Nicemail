@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 use std::net::{ToSocketAddrs, TcpStream};
 use std::time::Duration;
 
+use base64::{engine::general_purpose, Engine as _};
 use imap::types::{NameAttribute, StatusAttribute, UnsolicitedResponse};
 use imap::{Client, Session};
 use native_tls::{TlsConnector, TlsStream};
@@ -164,6 +165,8 @@ fn list_folders_session<T: Read + Write>(session: &mut Session<T>) -> Result<Vec
                 .unwrap_or(&full_name)
                 .to_string()
         };
+        // IMAP 非 ASCII 文件夹名用 modified-UTF-7 编码,解码成可读中文(如"收件箱")
+        let display_name = decode_utf7(&folder_name);
         let flags: Vec<String> = name.attributes().iter().map(attr_to_string).collect();
         let selectable = !name
             .attributes()
@@ -176,7 +179,7 @@ fn list_folders_session<T: Read + Write>(session: &mut Session<T>) -> Result<Vec
         };
         folders.push(Folder {
             full_name,
-            name: folder_name,
+            name: display_name,
             delimiter,
             flags,
             selectable,
@@ -537,6 +540,61 @@ fn attr_to_string(a: &NameAttribute) -> String {
         NameAttribute::Unmarked => "\\Unmarked".to_string(),
         NameAttribute::Custom(s) => s.to_string(),
     }
+}
+
+/// 解码 IMAP modified-UTF-7 文件夹名(中文文件夹在协议层是 `&xxxx-` 形式)。
+fn decode_utf7(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::new();
+    let mut i = 0usize;
+    while i < chars.len() {
+        let c = chars[i];
+        if c != '&' {
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        // '&' 开头,收集到 '-' 或下一个 '&'
+        i += 1;
+        let mut b64 = String::new();
+        while i < chars.len() {
+            let nc = chars[i];
+            if nc == '&' {
+                break;
+            }
+            i += 1;
+            if nc == '-' {
+                break;
+            }
+            b64.push(nc);
+        }
+        if b64.is_empty() {
+            // "&-" 表示字面 '&'
+            out.push('&');
+        } else {
+            // modified base64:',' 代替 '/',无填充 → 归一化后用 STANDARD 解
+            let normalized = b64.replace(',', "/");
+            let padded = match normalized.len() % 4 {
+                2 => format!("{normalized}=="),
+                3 => format!("{normalized}="),
+                _ => normalized,
+            };
+            if let Ok(bytes) = general_purpose::STANDARD.decode(padded) {
+                let mut decoded = String::new();
+                for chunk in bytes.chunks_exact(2) {
+                    let u = u16::from_be_bytes([chunk[0], chunk[1]]);
+                    if let Some(ch) = char::from_u32(u as u32) {
+                        decoded.push(ch);
+                    }
+                }
+                out.push_str(&decoded);
+            } else {
+                // 解码失败回退原文
+                out.push_str(&b64);
+            }
+        }
+    }
+    out
 }
 
 fn normalize_flag(flag: &str) -> String {

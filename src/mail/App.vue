@@ -74,6 +74,14 @@
 
     <!-- 账号向导(模态) -->
     <AccountWizard v-if="wizardOpen" @close="wizardOpen = false" />
+
+    <!-- 全局轻提示(WinUI 风格) -->
+    <Transition name="toast">
+      <div v-if="state.toastVisible" class="mail-toast" role="status">
+        <span class="icon-glyph mail-toast-icon" aria-hidden="true">&#xE73E;</span>
+        <span class="mail-toast-text">{{ state.toastMessage }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 

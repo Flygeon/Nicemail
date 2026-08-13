@@ -39,6 +39,10 @@ export async function selectFolder(accountId: string, folder: string): Promise<v
   selection.folder = folder;
   resetMailView();
   await loadMessages(accountId, folder, 0);
+  // 本地为空(首次进入/刚添加账号)→ 自动同步一次,让收件箱立即有内容
+  if (messages.value.length === 0) {
+    await refreshCurrentFolder();
+  }
 }
 
 /** 分页拉取邮件列表(每次 100 条,按时间倒序) */

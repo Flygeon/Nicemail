@@ -55,7 +55,7 @@
       <section class="sp-section">
         <h3 class="sp-section-title">{{ t('settings.accounts') }}</h3>
         <div v-if="accounts.length === 0" class="sp-empty">{{ t('empty.noAccounts') }}</div>
-        <div v-for="acc in accounts" :key="acc.id" class="sp-account-row">
+        <div v-for="acc in accounts" :key="acc.id" class="sp-account-row" @contextmenu.prevent="openAccountMenu(acc, $event)">
           <div class="sp-avatar" :style="{ backgroundColor: accountColorOf(acc) }">{{ initialOf(acc) }}</div>
           <div class="sp-account-info">
             <div class="sp-account-email">{{ acc.email }}</div>
@@ -103,6 +103,22 @@
         </div>
       </div>
     </div>
+
+    <!-- 账号右键菜单 -->
+    <div
+      v-if="accountMenuVisible"
+      class="sp-context-menu"
+      :style="{ left: `${accountMenuX}px`, top: `${accountMenuY}px` }">
+      <button type="button" class="sp-context-item" @click="menuDelete">
+        <span class="icon-glyph" aria-hidden="true">&#xE74D;</span>
+        {{ t('settings.accountDelete') }}
+      </button>
+    </div>
+    <div
+      v-if="accountMenuVisible"
+      class="sp-context-overlay"
+      @click="closeAccountMenu"
+      @contextmenu.prevent="closeAccountMenu"></div>
 
     <!-- 提示 -->
     <div v-if="infoOpen" class="sp-msg" :class="`is-${infoSeverity.toLowerCase()}`">
@@ -152,6 +168,32 @@ watch(material, (v) => {
 const deleteDialogOpen = ref(false);
 const deleteDialogMessage = ref('');
 let pendingDelete: AccountConfig | null = null;
+
+/* 右键上下文菜单 */
+const accountMenuVisible = ref(false);
+const accountMenuX = ref(0);
+const accountMenuY = ref(0);
+
+function openAccountMenu(acc: AccountConfig, e: MouseEvent): void {
+  pendingDelete = acc;
+  const menuW = 180;
+  const menuH = 40;
+  accountMenuX.value = Math.min(e.clientX, window.innerWidth - menuW - 8);
+  accountMenuY.value = Math.min(e.clientY, window.innerHeight - menuH - 8);
+  accountMenuVisible.value = true;
+}
+
+function closeAccountMenu(): void {
+  accountMenuVisible.value = false;
+  pendingDelete = null;
+}
+
+function menuDelete(): void {
+  const acc = pendingDelete;
+  accountMenuVisible.value = false;
+  pendingDelete = null;
+  if (acc) confirmDelete(acc);
+}
 
 function confirmDelete(acc: AccountConfig): void {
   pendingDelete = acc;
@@ -459,6 +501,44 @@ async function onOpenOAuthDocs(): Promise<void> {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ── 右键菜单 ── */
+.sp-context-menu {
+  position: fixed;
+  z-index: 400;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--stroke-surface-flyout, rgba(0, 0, 0, 0.06));
+  border-radius: 8px;
+  background: var(--flyout-bg, #fff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.sp-context-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sp-context-item:hover {
+  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
+}
+
+.sp-context-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 399;
 }
 
 /* ── 提示 ── */

@@ -45,6 +45,18 @@ export interface ComposeInitial {
 
 export const composeInitial = ref<ComposeInitial | null>(null);
 
+/* ── 全局轻提示(toast,发送成功等) ── */
+export const toastVisible = ref(false);
+export const toastMessage = ref('');
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function showToast(message: string, duration = 3200): void {
+  toastMessage.value = message;
+  toastVisible.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastVisible.value = false; }, duration);
+}
+
 /** 账号头像底色(按账号名稳定派生) */
 export function accountColor(account: AccountConfig | null | undefined): string {
   const palette = ['#0078D4', '#0F7B0F', '#9D5D00', '#C42B1C', '#744DA9', '#038387', '#E74856', '#10893E'];

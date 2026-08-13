@@ -206,3 +206,46 @@
     left: 300px;
   }
 }
+
+/* ── 全局轻提示(WinUI 风格 toast) ── */
+.mail-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border: 1px solid var(--stroke-surface-flyout, rgba(0, 0, 0, 0.06));
+  border-radius: 8px;
+  background: var(--flyout-bg, rgba(252, 252, 252, 0.92));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  color: var(--text-primary);
+  max-width: 420px;
+}
+
+.mail-toast-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+  color: var(--SystemFillColorSuccessBrush, #0f7b0f);
+}
+
+.mail-toast-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+}
