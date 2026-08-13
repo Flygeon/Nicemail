@@ -121,18 +121,28 @@ macro_rules! dispatch {
         match $client {
             ImapClient::Tls(c) => {
                 let mut session = login(c, $account, $secret)?;
+                send_imap_id(&mut session);
                 let res = ($f)(&mut session);
                 let _ = session.logout();
                 res
             }
             ImapClient::Plain(c) => {
                 let mut session = login(c, $account, $secret)?;
+                send_imap_id(&mut session);
                 let res = ($f)(&mut session);
                 let _ = session.logout();
                 res
             }
         }
     }};
+}
+
+/// 163.com 等服务器要求登录后先发 ID 命令声明客户端身份,否则 SELECT 被拒
+/// ("SELECT Unsafe Login")。RFC 2971 中 ID 是可选的,对不支持的服务器发送无害,
+/// 因此这里忽略错误(163 支持则成功,其他服务器失败也无妨)。
+fn send_imap_id<T: Read + Write>(session: &mut Session<T>) {
+    let cmd = r#"ID ("name" "Nicemail" "version" "0.1.0" "vendor" "Nicemail" "support-url" "https://github.com/Flygeon/Nicemail")"#;
+    let _ = session.run_command_and_check_ok(cmd);
 }
 
 /// 连接测试(仅登录)。
