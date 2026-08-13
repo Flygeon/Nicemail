@@ -54,8 +54,11 @@ pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
     } else {
         let mut client = Client::new(tcp);
         client.read_greeting().map_err(Error::Imap)?;
-        let caps = client.capabilities().unwrap_or_default();
-        if caps.has_str("STARTTLS") {
+        let has_starttls = client
+            .capabilities()
+            .map(|c| c.has_str("STARTTLS"))
+            .unwrap_or(false);
+        if has_starttls {
             match client.secure(&host, &tls) {
                 Ok(sec) => Ok(ImapClient::Tls(sec)),
                 Err(_) => {
@@ -140,7 +143,7 @@ fn list_folders_session<T: Read + Write>(session: &mut Session<T>) -> Result<Vec
             full_name.clone()
         } else {
             full_name
-                .rsplit(&delimiter)
+                .rsplit(delimiter.as_str())
                 .next()
                 .unwrap_or(&full_name)
                 .to_string()

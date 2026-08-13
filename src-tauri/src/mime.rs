@@ -5,6 +5,7 @@
 use std::collections::{HashMap, HashSet};
 
 use base64::{engine::general_purpose, Engine as _};
+use chrono::TimeZone;
 use mail_parser::{
     Address, ContentType, DateTime, GetHeader, HeaderName, Message, MessageParser, PartType,
 };
@@ -307,6 +308,7 @@ fn part_body_bytes(body: &PartType<'_>) -> Vec<u8> {
     match body {
         PartType::Text(s) | PartType::Html(s) => s.as_bytes().to_vec(),
         PartType::Binary(b) | PartType::InlineBinary(b) => b.to_vec(),
+        PartType::Message(m) => m.raw_message.as_ref().to_vec(),
         _ => Vec::new(),
     }
 }
