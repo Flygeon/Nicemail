@@ -263,7 +263,7 @@ function buildDraft(): api.AccountDraft {
     smtpPort: p.key === 'custom' ? Number(smtpPortStr.value) || p.smtpPort : p.smtpPort,
     smtpSsl: p.key === 'custom' ? smtpSsl.value : p.smtpSsl,
     password: password.value,
-    useOAuth: p.auth === 'oauth2',
+    useOauth: p.auth === 'oauth2',
   };
 }
 
@@ -343,7 +343,7 @@ async function finishOAuth(provider: 'gmail' | 'outlook', oauthEmail: string): P
     smtpPort: pres.smtpPort,
     smtpSsl: pres.smtpSsl,
     password: '',
-    useOAuth: true,
+    useOauth: true,
   };
   try {
     await actions.addAccount(draft);

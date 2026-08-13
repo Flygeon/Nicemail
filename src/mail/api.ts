@@ -47,7 +47,7 @@ export interface AccountDraft {
   /** 密码/授权码。OAuth 提供方可为空串(走登录流程) */
   password: string;
   /** OAuth 用:provider + 一次性授权 */
-  useOAuth: boolean;
+  useOauth: boolean;
 }
 
 export interface Folder {
