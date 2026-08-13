@@ -49,7 +49,13 @@ pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
     if account.imap_ssl {
         let stream = tls
             .connect(&host, tcp)
-            .map_err(|e| Error::Tls(e.into()))?;
+            .map_err(|e| match e {
+                native_tls::HandshakeError::Failure(err) => Error::Tls(err),
+                native_tls::HandshakeError::WouldBlock(_) => Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::WouldBlock,
+                    "TLS 握手被中断(WouldBlock)",
+                )),
+            })?;
         let mut client = Client::new(stream);
         client.read_greeting().map_err(Error::Imap)?;
         Ok(ImapClient::Tls(client))

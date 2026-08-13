@@ -143,7 +143,7 @@ pub fn access_token_for(provider: &str) -> Result<String, Error> {
         ("client_id", client_id.as_str()),
         ("grant_type", "refresh_token"),
     ];
-    let resp = ureq::post(token_url)
+    let mut resp = ureq::post(token_url)
         .send_form(form)
         .map_err(|e| Error::OAuth(format!("刷新 token 失败: {e}")))?;
     let body = resp
@@ -262,7 +262,7 @@ fn exchange_code(
         ("code_verifier", verifier.as_str()),
         ("grant_type", "authorization_code"),
     ];
-    let resp = ureq::post(token_url)
+    let mut resp = ureq::post(token_url)
         .send_form(form)
         .map_err(|e| Error::OAuth(format!("换取 token 失败: {e}")))?;
     let body = resp
