@@ -19,6 +19,8 @@ jobs:
           - ubuntu-latest
 
     runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -51,15 +53,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # tauri-action 会自动执行 tauri.conf.json 的 beforeBuildCommand(npm run build)
+      # tauri-action 会自动执行 tauri.conf.json 的 beforeBuildCommand(npm run build)。
+      # 只有打 tag(v*)时才传 tagName 触发 Release 创建;普通 push 只构建 + 传 artifact。
       - name: Build & bundle (tauri-action)
         uses: tauri-apps/tauri-action@v0
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Nicemail v__VERSION__'
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && 'v__VERSION__' || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && 'Nicemail v__VERSION__' || '' }}
           releaseBody: 'Nicemail 自动构建产物。安装说明见 README。'
           releaseDraft: true
           prerelease: false
