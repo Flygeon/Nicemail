@@ -237,8 +237,11 @@ fn extract_attachments(
 
         if (is_inline && content_id.is_some()) || referenced {
             if let Some(cid) = content_id {
-                let b64 = general_purpose::STANDARD.encode(&bytes);
-                embedded.insert(cid, format!("data:{mime};base64,{b64}"));
+                // 超大内嵌图不做 base64 编码,避免响应体暴涨卡死(前端显示为缺失图)
+                if bytes.len() < 1_500_000 {
+                    let b64 = general_purpose::STANDARD.encode(&bytes);
+                    embedded.insert(cid, format!("data:{mime};base64,{b64}"));
+                }
             }
         } else {
             attachments.push(AttachmentMeta {

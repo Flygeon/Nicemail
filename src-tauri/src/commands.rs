@@ -403,21 +403,11 @@ pub async fn mail_attachment_save(
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let raw = match db
-            .get_message_by_uid(&account_id, &folder, uid)?
-            .and_then(|m| m.raw)
-        {
-            Some(raw) => raw,
-            None => {
-                let secret = account_secret(&account, &db)?;
-                let client = crate::imap::connect(&account)?;
-                let (raw, flags) =
-                    crate::imap::fetch_message(client, &account, &secret, &folder, uid)?;
-                let msg = crate::mime::parse_full(&account_id, &folder, uid, &flags, &raw);
-                db.upsert_message(&msg)?;
-                raw
-            }
-        };
+        // 打开邮件时只拉了前 3MB,大附件的下载必须全量拉取原文再提取
+        let secret = account_secret(&account, &db)?;
+        let client = crate::imap::connect(&account)?;
+        let (raw, _flags) =
+            crate::imap::fetch_message_full(client, &account, &secret, &folder, uid)?;
         let data = crate::mime::extract_attachment(&raw, index)
             .ok_or_else(|| Error::InvalidInput("附件不存在或索引无效".into()))?;
         std::fs::write(&dest_path, data).map_err(Error::Io)?;

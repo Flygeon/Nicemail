@@ -305,12 +305,12 @@ where
         }
     }
 
-    // 对最新 15 封拉取全量,以生成预览
+    // 对最新 15 封拉取正文(截断 3MB),以生成预览;避免大附件卡住同步
     new_uids.sort_unstable_by(|a, b| b.cmp(a));
     let top: Vec<String> = new_uids.iter().take(15).map(|u| u.to_string()).collect();
     if !top.is_empty() {
         let set = top.join(",");
-        if let Ok(fetches) = session.uid_fetch(&set, "(UID FLAGS BODY.PEEK[])") {
+        if let Ok(fetches) = session.uid_fetch(&set, "(UID FLAGS BODY.PEEK[]<0.3000000>)") {
             for f in fetches.iter() {
                 if let Some(uid) = f.uid {
                     if let Some(body) = f.body() {
@@ -351,8 +351,10 @@ fn fetch_message_session<T: Read + Write>(
     uid: u32,
 ) -> Result<(Vec<u8>, Vec<String>), Error> {
     session.select(folder).map_err(Error::Imap)?;
+    // 只拉前 3MB:正文/文字通常在前面,避免大附件邮件整封加载导致内存暴涨/卡死。
+    // 附件下载用 fetch_message_full 全量拉取。
     let fetches = session
-        .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[])")
+        .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[]<0.3000000>)")
         .map_err(Error::Imap)?;
     let fetch = fetches
         .iter()
@@ -363,6 +365,31 @@ fn fetch_message_session<T: Read + Write>(
         .ok_or_else(|| Error::Imap(imap::Error::No("消息体为空".into())))?;
     let flags: Vec<String> = fetch.flags().iter().map(|f| f.to_string()).collect();
     Ok((body.to_vec(), flags))
+}
+
+/// 附件下载用:全量拉取整封邮件(可能很大,仅在用户显式下载时调用)。
+pub fn fetch_message_full(
+    client: ImapClient,
+    account: &AccountConfig,
+    secret: &str,
+    folder: &str,
+    uid: u32,
+) -> Result<(Vec<u8>, Vec<String>), Error> {
+    dispatch!(client, account, secret, |session| {
+        session.select(folder).map_err(Error::Imap)?;
+        let fetches = session
+            .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[])")
+            .map_err(Error::Imap)?;
+        let fetch = fetches
+            .iter()
+            .find(|f| f.uid == Some(uid))
+            .ok_or_else(|| Error::Imap(imap::Error::No("消息不存在".into())))?;
+        let body = fetch
+            .body()
+            .ok_or_else(|| Error::Imap(imap::Error::No("消息体为空".into())))?;
+        let flags: Vec<String> = fetch.flags().iter().map(|f| f.to_string()).collect();
+        Ok((body.to_vec(), flags))
+    })
 }
 
 /// 设置 flags(+/-)。同时更新本地 DB。
