@@ -129,7 +129,9 @@ pub fn finish(provider: &str, code: &str, state: &str) -> Result<String, Error> 
 
 /// 供 IMAP/SMTP XOAUTH2 使用:读取 refresh token,刷新出 access token。
 pub fn access_token_for(provider: &str) -> Result<String, Error> {
-    let refresh_token = keyring::get_password(&format!("oauth:{provider}"))
+    let key = format!("oauth:{provider}");
+    let refresh_token = crate::keyring::get_password(&key)
+        .or_else(|| crate::secret_db_get(&key))
         .ok_or_else(|| Error::OAuth(format!("{provider} 尚未完成 OAuth 授权,请先添加授权")))?;
     let client_id = client_id_for(provider);
     if client_id.is_empty() {
@@ -275,7 +277,10 @@ fn exchange_code(
     let refresh_token = json["refresh_token"].as_str().ok_or_else(|| {
         Error::OAuth(format!("未获取到 refresh_token(可能未勾选离线权限): {body}"))
     })?;
-    keyring::set_password(&format!("oauth:{provider}"), refresh_token)?;
+    // keyring 优先,同时落一份到本地 DB 回退
+    let key = format!("oauth:{provider}");
+    let _ = keyring::set_password(&key, refresh_token);
+    crate::secret_db_set(&key, refresh_token);
 
     let email = extract_email(&json);
     if email.is_empty() {

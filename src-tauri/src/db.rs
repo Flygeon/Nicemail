@@ -98,6 +98,49 @@ impl Db {
                 "#,
             )?;
         }
+        if v < 2 {
+            // v2:secrets 表 —— 密码/授权码的本地回退存储。
+            // 打包环境下系统 keyring 可能不可靠(凭据写不入 Windows 凭据管理器),
+            // 因此同时落一份到本地 SQLite,account_secret 先查 keyring 再回退 DB。
+            self.conn.execute_batch(
+                r#"
+                CREATE TABLE IF NOT EXISTS secrets (
+                    account_id TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+                PRAGMA user_version = 2;
+                "#,
+            )?;
+        }
+        Ok(())
+    }
+
+    // ── 秘密(密码/授权码,keyring 的回退) ──
+
+    pub fn set_secret(&self, account_id: &str, value: &str) -> Result<(), Error> {
+        self.conn
+            .execute(
+                "INSERT INTO secrets (account_id, value) VALUES (?1,?2) \
+                 ON CONFLICT(account_id) DO UPDATE SET value=excluded.value",
+                params![account_id, value],
+            )?;
+        Ok(())
+    }
+
+    pub fn get_secret(&self, account_id: &str) -> Result<Option<String>, Error> {
+        self.conn
+            .query_row(
+                "SELECT value FROM secrets WHERE account_id=?1",
+                [account_id],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(Error::Db)
+    }
+
+    pub fn delete_secret(&self, account_id: &str) -> Result<(), Error> {
+        self.conn
+            .execute("DELETE FROM secrets WHERE account_id=?1", [account_id])?;
         Ok(())
     }
 

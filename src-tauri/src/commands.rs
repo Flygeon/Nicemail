@@ -26,14 +26,16 @@ where
     r.map_err(|e| e.to_string())
 }
 
-/// 取账号凭据:oauth2 → 刷新 access token;password → keyring 里的密码。
-fn account_secret(account: &AccountConfig) -> Result<String, Error> {
+/// 取账号凭据:oauth2 → 刷新 access token;password → 优先 keyring,回退本地 DB。
+fn account_secret(account: &AccountConfig, db: &Db) -> Result<String, Error> {
     if account.auth == AuthKind::Oauth2 {
         crate::oauth::access_token_for(account.provider.as_str())
     } else {
-        crate::keyring::get_password(&account.id).ok_or_else(|| {
-            Error::Config("未找到该账号的密码/授权码,请重新添加账号".into())
-        })
+        crate::keyring::get_password(&account.id)
+            .or_else(|| db.get_secret(&account.id).ok().flatten())
+            .ok_or_else(|| {
+                Error::Config("未找到该账号的密码/授权码,请重新添加账号".into())
+            })
     }
 }
 
@@ -84,7 +86,9 @@ fn account_add_impl(draft: &AccountDraft) -> Result<AccountConfig, Error> {
     };
     db.insert_account(&account)?;
     if !draft.use_oauth && !draft.password.is_empty() {
-        crate::keyring::set_password(&id, &draft.password)?;
+        // 系统 keyring 优先;同时落一份到本地 DB,保证 keyring 不可用时也能同步/发件
+        let _ = crate::keyring::set_password(&id, &draft.password);
+        db.set_secret(&id, &draft.password)?;
     }
     Ok(account)
 }
@@ -112,6 +116,7 @@ pub async fn account_delete(id: String) -> Result<(), String> {
     spawn(move || {
         let db = Db::open(&db_path())?;
         db.delete_account(&id)?;
+        db.delete_secret(&id)?;
         let _ = crate::keyring::delete_password(&id);
         Ok(())
     })
@@ -222,7 +227,7 @@ pub async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> {
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
         crate::imap::list_folders(client, &account, &secret)
     })
@@ -240,7 +245,7 @@ pub async fn mail_sync(
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
 
         let progress = |processed: i64, total: i64| {
@@ -308,7 +313,7 @@ fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDeta
     let stored = match db.get_message_by_uid(account_id, folder, uid)? {
         Some(m) if m.raw.is_some() => m,
         _ => {
-            let secret = account_secret(&account)?;
+            let secret = account_secret(&account, &db)?;
             let client = crate::imap::connect(&account)?;
             let (raw, flags) = crate::imap::fetch_message(client, &account, &secret, folder, uid)?;
             let msg = crate::mime::parse_full(account_id, folder, uid, &flags, &raw);
@@ -332,7 +337,7 @@ pub async fn mail_set_flag(
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
         crate::imap::set_flags(client, &account, &secret, &folder, &uids, &flag, value, &db)
     })
@@ -351,7 +356,7 @@ pub async fn mail_move(
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
         crate::imap::move_messages(client, &account, &secret, &folder, &uids, &dest_folder, &db)
     })
@@ -365,7 +370,7 @@ pub async fn mail_delete(account_id: String, folder: String, uids: Vec<u32>) -> 
         let account = db
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
         crate::imap::delete_messages(client, &account, &secret, &folder, &uids, &db)
     })
@@ -404,7 +409,7 @@ pub async fn mail_attachment_save(
         {
             Some(raw) => raw,
             None => {
-                let secret = account_secret(&account)?;
+                let secret = account_secret(&account, &db)?;
                 let client = crate::imap::connect(&account)?;
                 let (raw, flags) =
                     crate::imap::fetch_message(client, &account, &secret, &folder, uid)?;
@@ -430,7 +435,7 @@ pub async fn mail_send(request: SendRequest) -> Result<MailSendResponse, String>
         let account = db
             .get_account(&request.account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let message_id = crate::smtp::send(&account, &secret, &request)?;
         Ok(MailSendResponse { message_id })
     })
@@ -445,7 +450,7 @@ pub async fn mail_save_draft(account_id: String, request: SendRequest) -> Result
             .get_account(&account_id)?
             .ok_or_else(|| Error::InvalidInput("账号不存在".into()))?;
         let raw = crate::smtp::build_draft_raw(&account, &request)?;
-        let secret = account_secret(&account)?;
+        let secret = account_secret(&account, &db)?;
         let client = crate::imap::connect(&account)?;
         crate::imap::append_draft(client, &account, &secret, &raw)
     })

@@ -13,11 +13,26 @@ use std::sync::OnceLock;
 
 use tauri::Manager;
 
+use crate::db::Db;
+
 /// app data dir(在 setup 中初始化)。
 pub static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn data_dir() -> &'static Path {
     DATA_DIR.get().expect("DATA_DIR 尚未初始化")
+}
+
+/// 从本地 DB secrets 表读取一个秘密(keyring 的回退)。
+pub fn secret_db_get(key: &str) -> Option<String> {
+    let db = Db::open(&data_dir().join("nicemail.db")).ok()?;
+    db.get_secret(key).ok().flatten()
+}
+
+/// 写入一个秘密到本地 DB secrets 表(keyring 的回退)。
+pub fn secret_db_set(key: &str, value: &str) {
+    if let Ok(db) = Db::open(&data_dir().join("nicemail.db")) {
+        let _ = db.set_secret(key, value);
+    }
 }
 
 /// 确保 oauth_config.json 占位文件存在。
