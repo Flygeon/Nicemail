@@ -57,6 +57,48 @@ fn connect_tcp(host: &str, port: u16) -> Result<TcpStream, Error> {
     Ok(tcp)
 }
 
+/// 逐字节读一行(避免 BufReader 过度缓冲,导致 crate 接手连接时丢掉多余字节)。
+fn read_line_bytes<R: Read>(r: &mut R) -> Result<Vec<u8>, Error> {
+    let mut line = Vec::new();
+    let mut byte = [0u8; 1];
+    loop {
+        match r.read(&mut byte) {
+            Ok(0) => return Ok(line), // EOF
+            Ok(_) => {
+                line.push(byte[0]);
+                if byte[0] == b'\n' {
+                    return Ok(line);
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(Error::Io(e)),
+        }
+    }
+}
+
+/// 手动完成:读 greeting + 发送 ID 命令。
+/// imap_proto 解析不了 163.com 等服务器的 `* ID NIL` 未标记响应,若用 crate 的
+/// run_command_and_check_ok 发 ID,会在 tag 断言处 panic 并把连接搞错位。
+/// 因此必须在 crate 接管连接之前手动把 greeting 和 ID 做完。
+fn handshake_with_id<T: Read + Write>(mut stream: T) -> Result<T, Error> {
+    // 读 greeting
+    let _greeting = read_line_bytes(&mut stream)?;
+    // 发 ID(非认证状态即可;163 要求 SELECT 前发过 ID)
+    let cmd = b"a000 ID (\"name\" \"Nicemail\" \"version\" \"0.1.0\" \"vendor\" \"Nicemail\")\r\n";
+    stream.write_all(cmd).map_err(Error::Io)?;
+    // 读到 tagged done(a000 OK/NO)为止,吞掉 `* ID ...` 未标记行
+    loop {
+        let line = read_line_bytes(&mut stream)?;
+        if line.is_empty() {
+            break;
+        }
+        if line.starts_with(b"a000 ") {
+            break;
+        }
+    }
+    Ok(stream)
+}
+
 pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
     let host = account.imap_host.clone();
     let port = account.imap_port;
@@ -73,20 +115,19 @@ pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
                     "TLS 握手被中断(WouldBlock)",
                 )),
             })?;
-        let mut client = Client::new(stream);
-        client.read_greeting().map_err(Error::Imap)?;
-        Ok(ImapClient::Tls(client))
+        let stream = handshake_with_id(stream)?;
+        // greeting 已手动读,直接交给 crate(不再 read_greeting)
+        Ok(ImapClient::Tls(Client::new(stream)))
     } else {
-        // STARTTLS 支持与否无需预查询:直接尝试 secure(),失败再回退明文重连
-        let mut client = Client::new(tcp);
-        client.read_greeting().map_err(Error::Imap)?;
+        // 手动 greeting + ID 后,尝试 STARTTLS;失败则回退明文重连
+        let stream = handshake_with_id(tcp)?;
+        let client = Client::new(stream);
         match client.secure(&host, &tls) {
             Ok(sec) => Ok(ImapClient::Tls(sec)),
             Err(_) => {
                 let tcp2 = connect_tcp(&host, port)?;
-                let mut c2 = Client::new(tcp2);
-                c2.read_greeting().map_err(Error::Imap)?;
-                Ok(ImapClient::Plain(c2))
+                let stream2 = handshake_with_id(tcp2)?;
+                Ok(ImapClient::Plain(Client::new(stream2)))
             }
         }
     }
@@ -121,31 +162,18 @@ macro_rules! dispatch {
         match $client {
             ImapClient::Tls(c) => {
                 let mut session = login(c, $account, $secret)?;
-                send_imap_id(&mut session);
                 let res = ($f)(&mut session);
                 let _ = session.logout();
                 res
             }
             ImapClient::Plain(c) => {
                 let mut session = login(c, $account, $secret)?;
-                send_imap_id(&mut session);
                 let res = ($f)(&mut session);
                 let _ = session.logout();
                 res
             }
         }
     }};
-}
-
-/// 163.com 等服务器要求登录后先发 ID 命令声明客户端身份,否则 SELECT 被拒
-/// ("SELECT Unsafe Login")。RFC 2971 中 ID 是可选的,对不支持的服务器发送无害,
-/// 因此这里忽略错误。用 catch_unwind 兜底:个别服务器对 ID 的异常响应可能触发
-/// imap crate 内部解析 panic,不能因此让进程崩溃。
-fn send_imap_id<T: Read + Write>(session: &mut Session<T>) {
-    let cmd = r#"ID ("name" "Nicemail" "version" "0.1.0" "vendor" "Nicemail" "support-url" "https://github.com/Flygeon/Nicemail")"#;
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = session.run_command_and_check_ok(cmd);
-    }));
 }
 
 /// 连接测试(仅登录)。
