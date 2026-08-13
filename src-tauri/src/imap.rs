@@ -375,7 +375,7 @@ pub fn fetch_message_full(
     folder: &str,
     uid: u32,
 ) -> Result<(Vec<u8>, Vec<String>), Error> {
-    dispatch!(client, account, secret, |session| {
+    dispatch!(client, account, secret, |session| -> Result<(Vec<u8>, Vec<String>), Error> {
         session.select(folder).map_err(Error::Imap)?;
         let fetches = session
             .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[])")
