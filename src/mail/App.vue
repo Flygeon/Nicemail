@@ -250,8 +250,16 @@ onBeforeUnmount(() => {
   @import '../styles/animations.css';
   @import './mail.css';
 
+  :root {
+    /* 所有 WinUI 组件用 var(--SymbolThemeFontFamily, 'Segoe Fluent Icons') 取图标字体。
+       这里显式指向打包进来的同名字体,避免依赖 Win11 才有的系统字体(Win10 上会变豆腐块)。 */
+    --SymbolThemeFontFamily: 'Segoe Fluent Icons';
+  }
+
   @font-face {
-    font-family: 'WinUIOnWebIcons';
+    /* SEGOEICONS.TTF 内部字体名就是 "Segoe Fluent Icons"。
+       注册成同名后,在 Win10/macOS/Linux 等无该系统字体的平台也能渲染全部图标。 */
+    font-family: 'Segoe Fluent Icons';
     src: url('../assets/Fonts/SEGOEICONS.TTF') format('truetype');
     font-display: block;
   }

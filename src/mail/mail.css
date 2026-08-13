@@ -40,7 +40,7 @@
 }
 
 .mail-titlebar-logo {
-  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-family: var(--SymbolThemeFontFamily, 'Segoe Fluent Icons');
   font-size: 16px;
   color: var(--accent-base);
 }
@@ -83,7 +83,7 @@
 }
 
 .mail-titlebar-window-controls .win-btn span {
-  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-family: var(--SymbolThemeFontFamily, 'Segoe Fluent Icons');
   font-size: 10px;
   line-height: 1;
 }
@@ -143,7 +143,7 @@
 }
 
 .mail-empty-icon {
-  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-family: var(--SymbolThemeFontFamily, 'Segoe Fluent Icons');
   font-size: 40px;
   color: var(--text-tertiary);
 }
