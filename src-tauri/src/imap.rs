@@ -139,10 +139,13 @@ macro_rules! dispatch {
 
 /// 163.com 等服务器要求登录后先发 ID 命令声明客户端身份,否则 SELECT 被拒
 /// ("SELECT Unsafe Login")。RFC 2971 中 ID 是可选的,对不支持的服务器发送无害,
-/// 因此这里忽略错误(163 支持则成功,其他服务器失败也无妨)。
+/// 因此这里忽略错误。用 catch_unwind 兜底:个别服务器对 ID 的异常响应可能触发
+/// imap crate 内部解析 panic,不能因此让进程崩溃。
 fn send_imap_id<T: Read + Write>(session: &mut Session<T>) {
     let cmd = r#"ID ("name" "Nicemail" "version" "0.1.0" "vendor" "Nicemail" "support-url" "https://github.com/Flygeon/Nicemail")"#;
-    let _ = session.run_command_and_check_ok(cmd);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = session.run_command_and_check_ok(cmd);
+    }));
 }
 
 /// 连接测试(仅登录)。

@@ -35,6 +35,24 @@ pub fn secret_db_set(key: &str, value: &str) {
     }
 }
 
+/// panic 也写一份到 app data dir/panic.log,方便定位闪退。
+fn setup_panic_hook() {
+    let default = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        default(info);
+        if let Some(dir) = DATA_DIR.get() {
+            use std::io::Write;
+            let path = dir.join("panic.log");
+            let msg = format!("{}\n", info);
+            let _ = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .and_then(|mut f| f.write_all(msg.as_bytes()));
+        }
+    }));
+}
+
 /// 确保 oauth_config.json 占位文件存在。
 fn ensure_oauth_config() {
     let path = data_dir().join("oauth_config.json");
@@ -48,6 +66,7 @@ fn ensure_oauth_config() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    setup_panic_hook();
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::default()
