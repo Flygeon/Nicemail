@@ -38,90 +38,86 @@
             </button>
           </div>
 
-          <div class="wz-field">
-            <WinTextBox
-              v-model:Text="name"
-              :Header="t('wizard.name')"
-              :PlaceholderText="t('wizard.namePlaceholder')" />
-          </div>
+          <label class="wz-field">
+            <span class="wz-label">{{ t('wizard.name') }}</span>
+            <input
+              class="wz-input"
+              v-model="name"
+              type="text"
+              :placeholder="t('wizard.namePlaceholder')" />
+          </label>
 
-          <div class="wz-field">
-            <WinTextBox
-              v-model:Text="email"
-              :Header="t('wizard.email')"
-              :PlaceholderText="t('wizard.emailPlaceholder')" />
-          </div>
+          <label class="wz-field">
+            <span class="wz-label">{{ t('wizard.email') }}</span>
+            <input
+              class="wz-input"
+              v-model="email"
+              type="text"
+              :placeholder="t('wizard.emailPlaceholder')" />
+          </label>
 
           <!-- 密码/授权码 -->
           <template v-if="preset.auth === 'password'">
-            <div class="wz-field">
-              <WinPasswordBox
-                v-model:Password="password"
-                :Header="t('wizard.password')"
-                :PlaceholderText="t('wizard.passwordPlaceholder')" />
-            </div>
+            <label class="wz-field">
+              <span class="wz-label">{{ preset.key === '163' || preset.key === '126' || preset.key === 'qq' ? t('wizard.password163') : t('wizard.password') }}</span>
+              <input
+                class="wz-input"
+                v-model="password"
+                type="password"
+                :placeholder="t('wizard.passwordPlaceholder')" />
+            </label>
             <p class="wz-hint">{{ t(preset.hintKey) }}</p>
           </template>
 
           <!-- OAuth2 -->
           <template v-else>
             <p class="wz-hint">{{ t(preset.hintKey) }}</p>
-            <WinButton
-              Style="{StaticResource AccentButtonStyle}"
-              :IsEnabled="!oauthWaiting"
-              @Click="startOAuth">
+            <button
+              type="button"
+              class="wz-btn wz-btn-accent"
+              :disabled="oauthWaiting"
+              @click="startOAuth">
               <span class="icon-glyph" aria-hidden="true">&#xE8D7;</span>
               {{ t('wizard.oauthLogin', { provider: t(preset.labelKey) }) }}
-            </WinButton>
-            <WinInfoBar
-              v-if="!oauthConfigured"
-              :IsOpen="true"
-              :Title="t('wizard.oauthNotConfigured')"
-              :Message="t('wizard.oauthNotConfiguredHint')"
-              Severity="Warning"
-              :IsClosable="false" />
+            </button>
+            <div v-if="!oauthConfigured" class="wz-msg wz-msg-warn">
+              <strong>{{ t('wizard.oauthNotConfigured') }}</strong>
+              <span>{{ t('wizard.oauthNotConfiguredHint') }}</span>
+            </div>
           </template>
 
           <!-- 自定义服务器 -->
           <template v-if="preset.key === 'custom'">
             <div class="wz-grid">
-              <div class="wz-field">
-                <WinTextBox
-                  v-model:Text="imapHost"
-                  :Header="t('wizard.customImap')"
-                  :PlaceholderText="t('wizard.customImapPlaceholder')" />
-              </div>
-              <div class="wz-field">
-                <WinTextBox
-                  v-model:Text="imapPortStr"
-                  :Header="`${t('wizard.customImap')} ${t('wizard.customPort')}`"
-                  :PlaceholderText="t('wizard.customPort')" />
-              </div>
+              <label class="wz-field">
+                <span class="wz-label">{{ t('wizard.customImap') }}</span>
+                <input class="wz-input" v-model="imapHost" type="text" :placeholder="t('wizard.customImapPlaceholder')" />
+              </label>
+              <label class="wz-field">
+                <span class="wz-label">{{ `${t('wizard.customImap')} ${t('wizard.customPort')}` }}</span>
+                <input class="wz-input" v-model="imapPortStr" type="number" :placeholder="t('wizard.customPort')" />
+              </label>
             </div>
-            <div class="wz-field wz-toggle-row">
-              <WinToggleSwitch
-                v-model:IsOn="imapSsl"
-                :Header="t('wizard.ssl')" />
-            </div>
+            <label class="wz-toggle">
+              <input v-model="imapSsl" type="checkbox" />
+              <span class="wz-toggle-track" aria-hidden="true"></span>
+              <span class="wz-toggle-label">{{ t('wizard.ssl') }}</span>
+            </label>
             <div class="wz-grid">
-              <div class="wz-field">
-                <WinTextBox
-                  v-model:Text="smtpHost"
-                  :Header="t('wizard.customSmtp')"
-                  :PlaceholderText="t('wizard.customSmtpPlaceholder')" />
-              </div>
-              <div class="wz-field">
-                <WinTextBox
-                  v-model:Text="smtpPortStr"
-                  :Header="`${t('wizard.customSmtp')} ${t('wizard.customPort')}`"
-                  :PlaceholderText="t('wizard.customPort')" />
-              </div>
+              <label class="wz-field">
+                <span class="wz-label">{{ t('wizard.customSmtp') }}</span>
+                <input class="wz-input" v-model="smtpHost" type="text" :placeholder="t('wizard.customSmtpPlaceholder')" />
+              </label>
+              <label class="wz-field">
+                <span class="wz-label">{{ `${t('wizard.customSmtp')} ${t('wizard.customPort')}` }}</span>
+                <input class="wz-input" v-model="smtpPortStr" type="number" :placeholder="t('wizard.customPort')" />
+              </label>
             </div>
-            <div class="wz-field wz-toggle-row">
-              <WinToggleSwitch
-                v-model:IsOn="smtpSsl"
-                :Header="t('wizard.ssl')" />
-            </div>
+            <label class="wz-toggle">
+              <input v-model="smtpSsl" type="checkbox" />
+              <span class="wz-toggle-track" aria-hidden="true"></span>
+              <span class="wz-toggle-label">{{ t('wizard.ssl') }}</span>
+            </label>
           </template>
 
           <!-- 测试结果 -->
@@ -131,33 +127,35 @@
 
           <!-- 底部动作 -->
           <div v-if="preset.auth === 'password'" class="wz-actions">
-            <WinButton
-              :IsEnabled="!testing && !adding && preset.auth === 'password'"
-              @Click="onTest">
+            <button
+              type="button"
+              class="wz-btn"
+              :disabled="testing || adding"
+              @click="onTest">
               <span class="icon-glyph" aria-hidden="true">&#xE72C;</span>
               {{ testing ? t('wizard.testing') : t('wizard.testConnection') }}
-            </WinButton>
-            <WinButton
-              Style="{StaticResource AccentButtonStyle}"
-              :IsEnabled="canAdd"
-              @Click="onAdd">
+            </button>
+            <button
+              type="button"
+              class="wz-btn wz-btn-accent"
+              :disabled="testing || adding"
+              @click="onAdd">
               <span class="icon-glyph" aria-hidden="true">&#xE710;</span>
               {{ t('action.add') }}
-            </WinButton>
+            </button>
           </div>
 
-          <WinInfoBar
-            v-model:IsOpen="errorInfoOpen"
-            :Title="t('status.error')"
-            :Message="errorMessage"
-            Severity="Error"
-            @Close="errorInfoOpen = false" />
+          <!-- 错误提示 -->
+          <div v-if="errorInfoOpen" class="wz-msg wz-msg-error">
+            <strong>{{ t('status.error') }}</strong>
+            <span>{{ errorMessage }}</span>
+          </div>
         </template>
       </div>
 
       <!-- OAuth 等待遮罩 -->
       <div v-if="oauthWaiting" class="wz-oauth-wait">
-        <WinProgressRing :IsActive="true" :IsIndeterminate="true" />
+        <span class="wz-spinner" aria-hidden="true"></span>
         <p class="wz-oauth-title">{{ t('wizard.oauthTitle') }}</p>
         <p class="wz-oauth-hint">{{ t('wizard.oauthWait') }}</p>
       </div>
@@ -248,12 +246,7 @@ function validate(): boolean {
 
 function showError(message: string): void {
   errorMessage.value = message;
-  if (errorInfoOpen.value) {
-    errorInfoOpen.value = false;
-    requestAnimationFrame(() => { errorInfoOpen.value = true; });
-  } else {
-    errorInfoOpen.value = true;
-  }
+  errorInfoOpen.value = true;
 }
 
 function buildDraft(): api.AccountDraft {
@@ -452,9 +445,7 @@ function onOverlayClick(): void {
   cursor: pointer;
 }
 
-.wz-close:hover {
-  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
-}
+.wz-close:hover { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
 
 .wz-body {
   flex: 1 1 auto;
@@ -492,13 +483,8 @@ function onOverlayClick(): void {
   transition: background var(--fast-duration, 0.15s) var(--fast-out-slow-in, ease-out);
 }
 
-.wz-provider:hover {
-  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
-}
-
-.wz-provider:active {
-  background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06));
-}
+.wz-provider:hover { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
+.wz-provider:active { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
 
 .wz-provider-dot {
   flex: 0 0 auto;
@@ -507,14 +493,10 @@ function onOverlayClick(): void {
   border-radius: 50%;
 }
 
-.wz-provider-label {
-  font-size: 13px;
-}
+.wz-provider-label { font-size: 13px; }
 
 /* ── 表单 ── */
-.wz-back-row {
-  margin-bottom: 12px;
-}
+.wz-back-row { margin-bottom: 12px; }
 
 .wz-back {
   display: inline-flex;
@@ -530,12 +512,38 @@ function onOverlayClick(): void {
   font-size: 12px;
 }
 
-.wz-back:hover {
-  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
-}
+.wz-back:hover { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
 
 .wz-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 12px;
+}
+
+.wz-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.wz-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--ctrl-border-rest, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-input-active, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline: none;
+  transition: border-color var(--fast-duration, 0.15s) ease;
+}
+
+.wz-input:focus {
+  border-color: var(--accent-base);
+  box-shadow: 0 0 0 1px var(--accent-base);
 }
 
 .wz-grid {
@@ -544,15 +552,109 @@ function onOverlayClick(): void {
   gap: 12px;
 }
 
-.wz-toggle-row {
-  margin-top: -4px;
+.wz-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  cursor: pointer;
+  user-select: none;
 }
+
+.wz-toggle input { display: none; }
+
+.wz-toggle-track {
+  width: 38px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--ctrl-fill-tertiary, rgba(128, 128, 128, 0.4));
+  position: relative;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.wz-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform var(--fast-duration, 0.15s) ease;
+}
+
+.wz-toggle input:checked + .wz-toggle-track {
+  background: var(--accent-base);
+}
+
+.wz-toggle input:checked + .wz-toggle-track::after {
+  transform: translateX(18px);
+}
+
+.wz-toggle-label { font-size: 13px; color: var(--text-primary); }
 
 .wz-hint {
   margin: -4px 0 12px;
   font-size: 12px;
   line-height: 18px;
   color: var(--text-secondary);
+}
+
+/* ── 按钮 ── */
+.wz-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 5px 16px;
+  border: 1px solid var(--ctrl-border-rest, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-default, rgba(255, 255, 255, 0.7));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.wz-btn:hover:not(:disabled) { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
+.wz-btn:active:not(:disabled) { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
+.wz-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.wz-btn-accent {
+  border-color: transparent;
+  background: var(--accent-base);
+  color: var(--accent-text, #fff);
+}
+
+.wz-btn-accent:hover:not(:disabled) { background: var(--accent-hover, rgba(0, 103, 192, 0.9)); }
+.wz-btn-accent:active:not(:disabled) { background: var(--accent-pressed, rgba(0, 103, 192, 0.8)); }
+
+/* ── 消息 ── */
+.wz-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.wz-msg strong { font-weight: 600; }
+
+.wz-msg-error {
+  color: var(--SystemFillColorCriticalBrush, #c42b1c);
+  background: var(--SystemFillColorCriticalBackgroundBrush, #fde7e9);
+}
+
+.wz-msg-warn {
+  color: var(--SystemFillColorCautionBrush, #9d5d00);
+  background: var(--SystemFillColorCautionBackgroundBrush, #fff4ce);
 }
 
 /* ── 测试结果 ── */
@@ -593,6 +695,19 @@ function onOverlayClick(): void {
   gap: 6px;
   background: var(--dialog-overlay, rgba(0, 0, 0, 0.3));
   border-radius: inherit;
+}
+
+.wz-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--subtle-secondary, rgba(0, 0, 0, 0.1));
+  border-top-color: var(--accent-base);
+  border-radius: 50%;
+  animation: wz-spin 0.8s linear infinite;
+}
+
+@keyframes wz-spin {
+  to { transform: rotate(360deg); }
 }
 
 .wz-oauth-title {
