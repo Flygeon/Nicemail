@@ -2,12 +2,13 @@
   <section class="settings-pane">
     <!-- 顶部返回 -->
     <header class="sp-header">
-      <WinButton
-        Style="{StaticResource SubtleButtonStyle}"
-        @Click="emit('close')">
+      <button
+        type="button"
+        class="sp-btn"
+        @click="emit('close')">
         <span class="icon-glyph" aria-hidden="true">&#xE72B;</span>
         {{ t('action.back') }}
-      </WinButton>
+      </button>
       <h2 class="sp-title">{{ t('settings.title') }}</h2>
     </header>
 
@@ -15,29 +16,39 @@
       <!-- 外观 -->
       <section class="sp-section">
         <h3 class="sp-section-title">{{ t('settings.appearance') }}</h3>
-        <WinExpander
-          class="sp-expander"
-          :Header="t('settings.theme')">
-          <template #HeaderIcon>
-            <span class="sp-header-icon" aria-hidden="true">&#xE790;</span>
-          </template>
-          <WinRadioButtons :SelectedIndex="themeIndex" @SelectionChanged="onThemeSelectionChanged">
-            <WinRadioButton :Content="t('settings.light')" />
-            <WinRadioButton :Content="t('settings.dark')" />
-            <WinRadioButton :Content="t('settings.system')" />
-          </WinRadioButtons>
-        </WinExpander>
-        <WinExpander
-          class="sp-expander"
-          :Header="t('settings.material')">
-          <template #HeaderIcon>
-            <span class="sp-header-icon" aria-hidden="true">&#xE7B4;</span>
-          </template>
-          <WinRadioButtons :SelectedIndex="materialIndex" @SelectionChanged="onMaterialSelectionChanged">
-            <WinRadioButton :Content="t('settings.mica')" />
-            <WinRadioButton :Content="t('settings.acrylic')" />
-          </WinRadioButtons>
-        </WinExpander>
+
+        <div class="sp-group">
+          <span class="sp-group-title">{{ t('settings.theme') }}</span>
+          <label class="sp-radio">
+            <input v-model="theme" type="radio" value="light" />
+            <span class="sp-radio-dot" aria-hidden="true"></span>
+            {{ t('settings.light') }}
+          </label>
+          <label class="sp-radio">
+            <input v-model="theme" type="radio" value="dark" />
+            <span class="sp-radio-dot" aria-hidden="true"></span>
+            {{ t('settings.dark') }}
+          </label>
+          <label class="sp-radio">
+            <input v-model="theme" type="radio" value="system" />
+            <span class="sp-radio-dot" aria-hidden="true"></span>
+            {{ t('settings.system') }}
+          </label>
+        </div>
+
+        <div class="sp-group">
+          <span class="sp-group-title">{{ t('settings.material') }}</span>
+          <label class="sp-radio">
+            <input v-model="material" type="radio" value="mica" />
+            <span class="sp-radio-dot" aria-hidden="true"></span>
+            {{ t('settings.mica') }}
+          </label>
+          <label class="sp-radio">
+            <input v-model="material" type="radio" value="acrylic" />
+            <span class="sp-radio-dot" aria-hidden="true"></span>
+            {{ t('settings.acrylic') }}
+          </label>
+        </div>
       </section>
 
       <!-- 账号 -->
@@ -50,12 +61,13 @@
             <div class="sp-account-email">{{ acc.email }}</div>
             <div class="sp-account-provider">{{ providerLabel(acc.provider) }}</div>
           </div>
-          <WinButton
-            Style="{StaticResource SubtleButtonStyle}"
+          <button
+            type="button"
+            class="sp-btn sp-delete-btn"
             :title="t('settings.accountDelete')"
-            @Click="confirmDelete(acc)">
+            @click="confirmDelete(acc)">
             <span class="icon-glyph sp-delete-icon" aria-hidden="true">&#xE74D;</span>
-          </WinButton>
+          </button>
         </div>
       </section>
 
@@ -65,33 +77,38 @@
         <div class="sp-about-card">
           <p class="sp-about-version">{{ t('settings.aboutVersion', { version }) }}</p>
           <p class="sp-about-desc">{{ t('settings.aboutDesc') }}</p>
-          <WinHyperlinkButton
-            @Click="onOpenOAuthDocs">
+          <button
+            type="button"
+            class="sp-link"
+            @click="onOpenOAuthDocs">
             <span class="icon-glyph" aria-hidden="true">&#xE8C7;</span>
             {{ t('settings.oauthDocs') }}
-          </WinHyperlinkButton>
+          </button>
         </div>
       </section>
     </div>
 
     <!-- 删除确认 -->
-    <WinContentDialog
-      v-model:IsOpen="deleteDialogOpen"
-      :Title="t('settings.accountDelete')"
-      :Content="deleteDialogMessage"
-      :PrimaryButtonText="t('action.delete')"
-      :CloseButtonText="t('action.cancel')"
-      DefaultButton="Close"
-      @PrimaryButtonClick="doDelete"
-      @CloseButtonClick="deleteDialogOpen = false"
-      @Closed="deleteDialogOpen = false" />
+    <div v-if="deleteDialogOpen" class="sp-dialog-overlay" @click.self="deleteDialogOpen = false">
+      <div class="sp-dialog">
+        <h3 class="sp-dialog-title">{{ t('settings.accountDelete') }}</h3>
+        <p class="sp-dialog-message">{{ deleteDialogMessage }}</p>
+        <div class="sp-dialog-actions">
+          <button type="button" class="sp-btn" @click="deleteDialogOpen = false">
+            {{ t('action.cancel') }}
+          </button>
+          <button type="button" class="sp-btn sp-btn-danger" @click="doDelete">
+            {{ t('action.delete') }}
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <WinInfoBar
-      v-model:IsOpen="infoOpen"
-      :Title="infoTitle"
-      :Message="infoMessage"
-      :Severity="infoSeverity"
-      @Close="infoOpen = false" />
+    <!-- 提示 -->
+    <div v-if="infoOpen" class="sp-msg" :class="`is-${infoSeverity.toLowerCase()}`">
+      <strong>{{ infoTitle }}</strong>
+      <span>{{ infoMessage }}</span>
+    </div>
   </section>
 </template>
 
@@ -112,22 +129,8 @@ const emit = defineEmits<{ (e: 'close'): void }>();
 const accounts = computed(() => state.accounts.value);
 
 /* ── 主题 / 材质 ── */
-const themeOptions = ['light', 'dark', 'system'];
-const materialOptions = ['mica', 'acrylic'];
-
 const theme = ref(localStorage.getItem('winui-theme-setting') ?? 'system');
 const material = ref(localStorage.getItem('winui-material-setting') ?? 'mica');
-
-const themeIndex = computed(() => themeOptions.indexOf(theme.value));
-const materialIndex = computed(() => materialOptions.indexOf(material.value));
-
-function onThemeSelectionChanged(e: { SelectedIndex: number }): void {
-  theme.value = themeOptions[e.SelectedIndex] ?? theme.value;
-}
-
-function onMaterialSelectionChanged(e: { SelectedIndex: number }): void {
-  material.value = materialOptions[e.SelectedIndex] ?? material.value;
-}
 
 function applyTheme(mode: string): void {
   const html = document.documentElement;
@@ -235,7 +238,7 @@ async function onOpenOAuthDocs(): Promise<void> {
 
 .sp-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -244,57 +247,139 @@ async function onOpenOAuthDocs(): Promise<void> {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px 24px 32px;
-  max-width: 720px;
+  padding: 16px 24px 40px;
+  max-width: 640px;
 }
 
-.sp-section {
-  margin-bottom: 24px;
-}
+.sp-section { margin-bottom: 28px; }
 
 .sp-section-title {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.sp-expander {
-  margin-bottom: 8px;
+.sp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.sp-header-icon {
-  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
-  font-size: 16px;
-  line-height: 1;
+.sp-group-title {
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
-/* ── 账号行 ── */
+.sp-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-radio input { display: none; }
+
+.sp-radio-dot {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 1px solid var(--ctrl-strong-stroke, rgba(0, 0, 0, 0.45));
+  border-radius: 50%;
+  position: relative;
+}
+
+.sp-radio input:checked + .sp-radio-dot {
+  border-color: var(--accent-base);
+  border-width: 2px;
+}
+
+.sp-radio input:checked + .sp-radio-dot::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--accent-base);
+}
+
+/* ── 按钮 ── */
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.sp-btn:hover { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
+.sp-btn:active { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
+
+.sp-delete-btn { color: var(--text-secondary); }
+.sp-delete-btn:hover { color: var(--SystemFillColorCriticalBrush, #c42b1c); }
+
+.sp-btn-danger {
+  border: 1px solid transparent;
+  background: var(--SystemFillColorCriticalBrush, #c42b1c);
+  color: #fff;
+}
+
+.sp-btn-danger:hover { background: rgba(196, 43, 28, 0.9); }
+
+.sp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent-base);
+  cursor: pointer;
+}
+
+.sp-link:hover { text-decoration: underline; }
+
+/* ── 账号 ── */
+.sp-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
 .sp-account-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border: 1px solid var(--stroke-divider, rgba(0, 0, 0, 0.06));
-  border-radius: 6px;
-  background: var(--card-bg, rgba(255, 255, 255, 0.5));
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--stroke-divider, rgba(0, 0, 0, 0.04));
 }
 
 .sp-avatar {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  user-select: none;
 }
 
 .sp-account-info {
@@ -304,7 +389,6 @@ async function onOpenOAuthDocs(): Promise<void> {
 
 .sp-account-email {
   font-size: 13px;
-  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -313,27 +397,14 @@ async function onOpenOAuthDocs(): Promise<void> {
 
 .sp-account-provider {
   font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.sp-delete-icon {
   color: var(--text-tertiary);
-}
-
-.sp-empty {
-  padding: 16px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  border: 1px dashed var(--stroke-divider, rgba(0, 0, 0, 0.06));
-  border-radius: 6px;
-  text-align: center;
 }
 
 /* ── 关于 ── */
 .sp-about-card {
-  padding: 12px 14px;
+  padding: 12px 16px;
   border: 1px solid var(--stroke-divider, rgba(0, 0, 0, 0.06));
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--card-bg, rgba(255, 255, 255, 0.5));
 }
 
@@ -345,9 +416,87 @@ async function onOpenOAuthDocs(): Promise<void> {
 }
 
 .sp-about-desc {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+/* ── 对话框 ── */
+.sp-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sp-dialog {
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--flyout-bg, #fff);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+}
+
+.sp-dialog-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sp-dialog-message {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+
+.sp-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── 提示 ── */
+.sp-msg {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.sp-msg strong { font-weight: 600; }
+
+.sp-msg.is-success {
+  color: var(--SystemFillColorSuccessBrush, #0f7b0f);
+  background: var(--SystemFillColorSuccessBackgroundBrush, #dff6dd);
+}
+
+.sp-msg.is-error {
+  color: var(--SystemFillColorCriticalBrush, #c42b1c);
+  background: var(--SystemFillColorCriticalBackgroundBrush, #fde7e9);
+}
+
+.sp-msg.is-warning {
+  color: var(--SystemFillColorCautionBrush, #9d5d00);
+  background: var(--SystemFillColorCautionBackgroundBrush, #fff4ce);
+}
+
+.sp-msg.is-informational {
+  color: var(--text-secondary);
+  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
 }
 
 .icon-glyph {

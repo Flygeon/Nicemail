@@ -7,24 +7,22 @@
         <span v-if="unreadCount > 0" class="mlp-unread-badge">{{ t('folder.unread', { count: unreadCount }) }}</span>
       </div>
       <div class="mlp-toolbar-actions">
-        <WinProgressRing
-          v-if="syncing"
-          class="mlp-sync-ring"
-          :IsActive="true"
-          :IsIndeterminate="true" />
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
-          :IsEnabled="!syncing"
-          @Click="onRefresh">
+        <span v-if="syncing" class="mlp-spinner" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="mlp-btn"
+          :disabled="syncing"
+          @click="onRefresh">
           <span class="icon-glyph" aria-hidden="true">&#xE72C;</span>
           {{ t('action.refresh') }}
-        </WinButton>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
-          @Click="onCompose">
+        </button>
+        <button
+          type="button"
+          class="mlp-btn"
+          @click="onCompose">
           <span class="icon-glyph" aria-hidden="true">&#xE715;</span>
           {{ t('action.compose') }}
-        </WinButton>
+        </button>
       </div>
     </header>
 
@@ -32,11 +30,12 @@
     <div v-if="searchOpen" class="mlp-search-bar">
       <span class="icon-glyph mlp-search-icon" aria-hidden="true">&#xE721;</span>
       <span class="mlp-search-text">{{ t('search.in', { folder: folderName }) }}</span>
-      <WinButton
-        Style="{StaticResource SubtleButtonStyle}"
-        @Click="clearSearch">
+      <button
+        type="button"
+        class="mlp-btn mlp-btn-small"
+        @click="clearSearch">
         {{ t('action.cancel') }}
-      </WinButton>
+      </button>
     </div>
 
     <!-- 邮件列表 -->
@@ -76,7 +75,7 @@
       </div>
 
       <div v-if="loadingMessages" class="mlp-loading">
-        <WinProgressRing :IsActive="true" :IsIndeterminate="true" />
+        <span class="mlp-spinner" aria-hidden="true"></span>
       </div>
     </div>
   </section>
@@ -201,10 +200,44 @@ function formatTime(ts: number): string {
   gap: 4px;
 }
 
-.mlp-sync-ring {
-  width: 20px;
-  height: 20px;
-  margin-right: 2px;
+.mlp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.mlp-btn:hover:not(:disabled) { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
+.mlp-btn:active:not(:disabled) { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
+.mlp-btn:disabled { opacity: 0.5; cursor: default; }
+
+.mlp-btn-small {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--accent-base);
+}
+
+.mlp-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid var(--subtle-secondary, rgba(0, 0, 0, 0.1));
+  border-top-color: var(--accent-base);
+  border-radius: 50%;
+  animation: mlp-spin 0.8s linear infinite;
+}
+
+@keyframes mlp-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── 搜索横幅 ── */

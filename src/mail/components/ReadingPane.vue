@@ -3,38 +3,43 @@
     <template v-if="detail">
       <!-- 操作条 -->
       <header class="rp-toolbar">
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
+        <button
+          type="button"
+          class="rp-btn"
           :title="t('nav.starred')"
-          @Click="onToggleStar">
+          @click="onToggleStar">
           <span v-if="isStarred" class="icon-glyph is-on" aria-hidden="true">&#xE734;</span>
           <span v-else class="icon-glyph" aria-hidden="true">&#xE735;</span>
-        </WinButton>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
+        </button>
+        <button
+          type="button"
+          class="rp-btn"
           :title="t('action.delete')"
-          @Click="onDelete">
+          @click="onDelete">
           <span class="icon-glyph" aria-hidden="true">&#xE74D;</span>
-        </WinButton>
+        </button>
         <div class="rp-toolbar-sep" aria-hidden="true"></div>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
+        <button
+          type="button"
+          class="rp-btn"
           :title="t('action.reply')"
-          @Click="onReply">
+          @click="onReply">
           <span class="icon-glyph" aria-hidden="true">&#xE97A;</span>
-        </WinButton>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
+        </button>
+        <button
+          type="button"
+          class="rp-btn"
           :title="t('action.replyAll')"
-          @Click="onReplyAll">
+          @click="onReplyAll">
           <span class="icon-glyph" aria-hidden="true">&#xE8C2;</span>
-        </WinButton>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
+        </button>
+        <button
+          type="button"
+          class="rp-btn"
           :title="t('action.forward')"
-          @Click="onForward">
+          @click="onForward">
           <span class="icon-glyph" aria-hidden="true">&#xE8AB;</span>
-        </WinButton>
+        </button>
       </header>
 
       <div ref="scrollEl" class="rp-scroll">
@@ -67,11 +72,12 @@
         <div v-if="hasRemoteBlocked" class="rp-remote-banner">
           <span class="icon-glyph rp-remote-icon" aria-hidden="true">&#xE7B3;</span>
           <span class="rp-remote-text">{{ t('mail.remoteBlocked') }}</span>
-          <WinButton
-            Style="{StaticResource SubtleButtonStyle}"
-            @Click="showRemoteImages">
+          <button
+            type="button"
+            class="rp-btn"
+            @click="showRemoteImages">
             {{ t('mail.showRemote') }}
-          </WinButton>
+          </button>
         </div>
 
         <!-- 正文 -->
@@ -104,12 +110,10 @@
         </div>
       </div>
 
-      <WinInfoBar
-        v-model:IsOpen="infoOpen"
-        :Title="infoTitle"
-        :Message="infoMessage"
-        :Severity="infoSeverity"
-        @Close="infoOpen = false" />
+      <div v-if="infoOpen" class="rp-msg" :class="`is-${infoSeverity.toLowerCase()}`">
+        <strong>{{ infoTitle }}</strong>
+        <span>{{ infoMessage }}</span>
+      </div>
     </template>
 
     <!-- 空态 -->
@@ -339,6 +343,62 @@ function formatFullDate(ts: number): string {
   padding: 6px 10px;
   border-bottom: 1px solid var(--stroke-divider, rgba(0, 0, 0, 0.06));
   background: var(--card-bg, rgba(255, 255, 255, 0.5));
+}
+
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease, color var(--fast-duration, 0.15s) ease;
+}
+
+.rp-btn:hover { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); color: var(--text-primary); }
+.rp-btn:active { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
+
+.rp-msg {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.rp-msg strong { font-weight: 600; }
+
+.rp-msg.is-success {
+  color: var(--SystemFillColorSuccessBrush, #0f7b0f);
+  background: var(--SystemFillColorSuccessBackgroundBrush, #dff6dd);
+}
+
+.rp-msg.is-error {
+  color: var(--SystemFillColorCriticalBrush, #c42b1c);
+  background: var(--SystemFillColorCriticalBackgroundBrush, #fde7e9);
+}
+
+.rp-msg.is-warning {
+  color: var(--SystemFillColorCautionBrush, #9d5d00);
+  background: var(--SystemFillColorCautionBackgroundBrush, #fff4ce);
+}
+
+.rp-msg.is-informational {
+  color: var(--text-secondary);
+  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
 }
 
 .rp-toolbar-sep {

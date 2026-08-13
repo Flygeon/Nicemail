@@ -159,6 +159,24 @@
   color: var(--text-secondary);
 }
 
+.mail-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 6px 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--accent-base);
+  color: var(--accent-text, #fff);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.mail-empty-btn:hover { background: var(--accent-hover, rgba(0, 103, 192, 0.9)); }
+.mail-empty-btn:active { background: var(--accent-pressed, rgba(0, 103, 192, 0.8)); }
+
 /* ── 邮件三栏 ── */
 .mail-panes {
   position: absolute;

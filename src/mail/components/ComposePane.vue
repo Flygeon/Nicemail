@@ -4,62 +4,58 @@
     <header class="cp-toolbar">
       <h2 class="cp-title">{{ t('compose.title') }}</h2>
       <div class="cp-toolbar-actions">
-        <WinProgressRing
-          v-if="busy"
-          class="cp-progress"
-          :IsActive="true"
-          :IsIndeterminate="true" />
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
-          :IsEnabled="!busy"
-          @Click="onSaveDraft">
+        <span v-if="busy" class="cp-spinner" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="cp-btn"
+          :disabled="busy"
+          @click="onSaveDraft">
           {{ t('action.saveDraft') }}
-        </WinButton>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
-          :IsEnabled="!busy"
-          @Click="onClose">
+        </button>
+        <button
+          type="button"
+          class="cp-btn"
+          :disabled="busy"
+          @click="onClose">
           {{ t('action.cancel') }}
-        </WinButton>
-        <WinButton
-          Style="{StaticResource AccentButtonStyle}"
-          :IsEnabled="!busy"
-          @Click="onSend">
+        </button>
+        <button
+          type="button"
+          class="cp-btn cp-btn-accent"
+          :disabled="busy"
+          @click="onSend">
           <span class="icon-glyph" aria-hidden="true">&#xE724;</span>
           {{ busy ? t('compose.sending') : t('action.send') }}
-        </WinButton>
+        </button>
       </div>
     </header>
 
     <div class="cp-scroll">
       <!-- 发件账号 -->
-      <div class="cp-field">
-        <WinComboBox
-          v-model:SelectedItem="fromAccount"
-          :ItemsSource="accounts"
-          DisplayMemberPath="email"
-          :Header="t('compose.fromAccount')" />
-      </div>
+      <label class="cp-field">
+        <span class="cp-label">{{ t('compose.fromAccount') }}</span>
+        <select v-model="fromAccountId" class="cp-input" :disabled="busy">
+          <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.email }}</option>
+        </select>
+      </label>
 
       <!-- 收件人 -->
-      <div class="cp-field">
-        <WinTextBox
-          v-model:Text="to"
-          :Header="t('compose.to')"
-          :PlaceholderText="t('compose.to')" />
-      </div>
-      <div v-if="showCc" class="cp-field">
-        <WinTextBox
-          v-model:Text="cc"
-          :Header="t('compose.cc')"
-          :PlaceholderText="t('compose.cc')" />
-      </div>
-      <div v-if="showBcc" class="cp-field">
-        <WinTextBox
-          v-model:Text="bcc"
-          :Header="t('compose.bcc')"
-          :PlaceholderText="t('compose.bcc')" />
-      </div>
+      <label class="cp-field">
+        <span class="cp-label">{{ t('compose.to') }}</span>
+        <input
+          v-model="to"
+          class="cp-input"
+          type="text"
+          :placeholder="t('compose.to')" />
+      </label>
+      <label v-if="showCc" class="cp-field">
+        <span class="cp-label">{{ t('compose.cc') }}</span>
+        <input v-model="cc" class="cp-input" type="text" :placeholder="t('compose.cc')" />
+      </label>
+      <label v-if="showBcc" class="cp-field">
+        <span class="cp-label">{{ t('compose.bcc') }}</span>
+        <input v-model="bcc" class="cp-input" type="text" :placeholder="t('compose.bcc')" />
+      </label>
       <div v-if="!showCc || !showBcc" class="cp-add-row">
         <button v-if="!showCc" type="button" class="cp-add-link" @click="showCc = true">{{ t('compose.addCc') }}</button>
         <span v-if="!showCc && !showBcc" class="cp-add-sep" aria-hidden="true">·</span>
@@ -67,22 +63,23 @@
       </div>
 
       <!-- 主题 -->
-      <div class="cp-field">
-        <WinTextBox
-          v-model:Text="subject"
-          :Header="t('compose.subject')"
-          :PlaceholderText="t('compose.subject')" />
-      </div>
+      <label class="cp-field">
+        <span class="cp-label">{{ t('compose.subject') }}</span>
+        <input
+          v-model="subject"
+          class="cp-input"
+          type="text"
+          :placeholder="t('compose.subject')" />
+      </label>
 
       <!-- 正文 -->
-      <div class="cp-field cp-body-field">
-        <WinTextBox
-          v-model:Text="body"
-          :Header="t('compose.body')"
-          :PlaceholderText="t('compose.body')"
-          :AcceptsReturn="true"
-          :TextWrapping="'Wrap'" />
-      </div>
+      <label class="cp-field">
+        <span class="cp-label">{{ t('compose.body') }}</span>
+        <textarea
+          v-model="body"
+          class="cp-input cp-body"
+          :placeholder="t('compose.body')"></textarea>
+      </label>
 
       <!-- 附件 -->
       <div class="cp-attachments">
@@ -100,27 +97,27 @@
             <span class="icon-glyph" aria-hidden="true">&#xE711;</span>
           </button>
         </div>
-        <WinButton
-          Style="{StaticResource SubtleButtonStyle}"
-          :IsEnabled="!busy"
-          @Click="onAddAttachment">
+        <button
+          type="button"
+          class="cp-btn"
+          :disabled="busy"
+          @click="onAddAttachment">
           <span class="icon-glyph" aria-hidden="true">&#xE710;</span>
           {{ t('action.addAttachment') }}
-        </WinButton>
+        </button>
       </div>
 
-      <WinInfoBar
-        v-model:IsOpen="infoOpen"
-        :Title="infoTitle"
-        :Message="infoMessage"
-        :Severity="infoSeverity"
-        @Close="infoOpen = false" />
+      <!-- 提示 -->
+      <div v-if="infoOpen" class="cp-msg" :class="`is-${infoSeverity.toLowerCase()}`">
+        <strong>{{ infoTitle }}</strong>
+        <span>{{ infoMessage }}</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from '../../components/i18n/index';
 import * as state from '../state';
 import * as actions from '../actions';
@@ -131,7 +128,8 @@ import { open } from '@tauri-apps/plugin-dialog';
 const { t } = useI18n();
 
 const accounts = computed(() => state.accounts.value);
-const fromAccount = ref<api.AccountConfig | null>(null);
+const fromAccountId = ref('');
+const fromAccount = computed(() => accounts.value.find((a) => a.id === fromAccountId.value) ?? null);
 
 const to = ref('');
 const cc = ref('');
@@ -152,12 +150,7 @@ function showInfo(title: string, message: string, severity: 'Informational' | 'S
   infoTitle.value = title;
   infoMessage.value = message;
   infoSeverity.value = severity;
-  if (infoOpen.value) {
-    infoOpen.value = false;
-    void nextTick(() => { infoOpen.value = true; });
-  } else {
-    infoOpen.value = true;
-  }
+  infoOpen.value = true;
 }
 
 onMounted(() => {
@@ -174,7 +167,7 @@ onMounted(() => {
   const pre = initial?.accountId
     ? accounts.value.find((a) => a.id === initial.accountId)
     : undefined;
-  fromAccount.value = pre ?? state.currentAccount() ?? accounts.value[0] ?? null;
+  fromAccountId.value = (pre ?? state.currentAccount() ?? accounts.value[0] ?? null)?.id ?? '';
   state.composeInitial.value = null;
 });
 
@@ -296,9 +289,47 @@ function basename(p: string): string {
   gap: 6px;
 }
 
-.cp-progress {
-  width: 20px;
-  height: 20px;
+.cp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 4px 12px;
+  border: 1px solid var(--ctrl-border-rest, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-default, rgba(255, 255, 255, 0.7));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--fast-duration, 0.15s) ease;
+}
+
+.cp-btn:hover:not(:disabled) { background: var(--subtle-secondary, rgba(0, 0, 0, 0.04)); }
+.cp-btn:active:not(:disabled) { background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06)); }
+.cp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cp-btn-accent {
+  border-color: transparent;
+  background: var(--accent-base);
+  color: var(--accent-text, #fff);
+}
+
+.cp-btn-accent:hover:not(:disabled) { background: var(--accent-hover, rgba(0, 103, 192, 0.9)); }
+.cp-btn-accent:active:not(:disabled) { background: var(--accent-pressed, rgba(0, 103, 192, 0.8)); }
+
+.cp-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid var(--subtle-secondary, rgba(0, 0, 0, 0.1));
+  border-top-color: var(--accent-base);
+  border-radius: 50%;
+  animation: cp-spin 0.8s linear infinite;
+}
+
+@keyframes cp-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── 表单区 ── */
@@ -311,11 +342,41 @@ function basename(p: string): string {
 }
 
 .cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 12px;
 }
 
-.cp-body-field :deep(.win-textbox-textarea) {
+.cp-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cp-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--ctrl-border-rest, rgba(0, 0, 0, 0.06));
+  border-radius: 4px;
+  background: var(--ctrl-fill-input-active, #fff);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline: none;
+  transition: border-color var(--fast-duration, 0.15s) ease;
+}
+
+.cp-input:focus {
+  border-color: var(--accent-base);
+  box-shadow: 0 0 0 1px var(--accent-base);
+}
+
+.cp-body {
   min-height: 180px;
+  resize: vertical;
+  line-height: 22px;
 }
 
 .cp-add-row {
@@ -336,13 +397,9 @@ function basename(p: string): string {
   cursor: pointer;
 }
 
-.cp-add-link:hover {
-  text-decoration: underline;
-}
+.cp-add-link:hover { text-decoration: underline; }
 
-.cp-add-sep {
-  color: var(--text-tertiary);
-}
+.cp-add-sep { color: var(--text-tertiary); }
 
 /* ── 附件 ── */
 .cp-attachments {
@@ -364,9 +421,7 @@ function basename(p: string): string {
   background: var(--card-bg, rgba(255, 255, 255, 0.5));
 }
 
-.cp-att-icon {
-  color: var(--accent-base);
-}
+.cp-att-icon { color: var(--accent-base); }
 
 .cp-att-name {
   flex: 1 1 auto;
@@ -396,6 +451,40 @@ function basename(p: string): string {
 .cp-att-remove:hover {
   background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
   color: var(--text-primary);
+}
+
+/* ── 提示 ── */
+.cp-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.cp-msg strong { font-weight: 600; }
+
+.cp-msg.is-success {
+  color: var(--SystemFillColorSuccessBrush, #0f7b0f);
+  background: var(--SystemFillColorSuccessBackgroundBrush, #dff6dd);
+}
+
+.cp-msg.is-error {
+  color: var(--SystemFillColorCriticalBrush, #c42b1c);
+  background: var(--SystemFillColorCriticalBackgroundBrush, #fde7e9);
+}
+
+.cp-msg.is-warning {
+  color: var(--SystemFillColorCautionBrush, #9d5d00);
+  background: var(--SystemFillColorCautionBackgroundBrush, #fff4ce);
+}
+
+.cp-msg.is-informational {
+  color: var(--text-secondary);
+  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
 }
 
 .icon-glyph {

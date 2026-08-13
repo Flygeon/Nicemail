@@ -55,7 +55,9 @@
               <span class="mail-empty-icon" aria-hidden="true">&#xE8D7;</span>
               <h2>{{ t('empty.noAccounts') }}</h2>
               <p>{{ t('empty.noAccountsHint') }}</p>
-              <WinButton :Content="t('action.add')" Style="{StaticResource AccentButtonStyle}" @Click="openWizard" />
+              <button type="button" class="mail-empty-btn" @click="openWizard">
+                {{ t('action.add') }}
+              </button>
             </div>
           </div>
 
@@ -81,7 +83,6 @@ import { useI18n } from '../components/i18n/index';
 import WinToolTipService from '../components/WinToolTipService.vue';
 import WinAutoSuggestBox from '../components/WinAutoSuggestBox.vue';
 import WinNavigationView from '../components/WinNavigationView.vue';
-import WinButton from '../components/WinButton.vue';
 
 import * as state from './state';
 import * as actions from './actions';
@@ -113,6 +114,12 @@ const themeSetting = ref(localStorage.getItem('winui-theme-setting') ?? 'system'
 const materialSetting = ref(localStorage.getItem('winui-material-setting') ?? 'mica');
 provide('themeSetting', themeSetting);
 provide('materialSetting', materialSetting);
+// WinThemeWrapper 提供的上下文,WinComboBox/WinMenuFlyout 等组件 inject 它
+provide('winuiTheme', computed(() =>
+  themeSetting.value === 'dark' || (themeSetting.value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    ? 'dark'
+    : 'light'
+));
 
 function applyTheme(mode: string): void {
   const html = document.documentElement;

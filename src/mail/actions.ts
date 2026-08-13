@@ -61,16 +61,29 @@ export async function loadMoreMessages(): Promise<void> {
   await loadMessages(selection.accountId, selection.folder, messages.value.length);
 }
 
+/** 给 Promise 加超时,避免网络问题导致按钮卡死 */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 /** 手动/自动同步当前文件夹 */
 export async function refreshCurrentFolder(): Promise<void> {
   if (!selection.accountId || !selection.folder) return;
   syncing.value = true;
   const token = ++activeSyncToken;
   try {
-    await api.mailSync(selection.accountId, selection.folder);
+    await withTimeout(api.mailSync(selection.accountId, selection.folder), 60000, '同步超时');
     if (token !== activeSyncToken) return;
     await loadMessages(selection.accountId, selection.folder, 0);
     await refreshUnreadCounts(selection.accountId);
+  } catch (err) {
+    console.error('同步失败:', err);
   } finally {
     if (token === activeSyncToken) syncing.value = false;
   }
