@@ -263,4 +263,45 @@ onBeforeUnmount(() => {
     src: url('../assets/Fonts/SEGOEICONS.TTF') format('truetype');
     font-display: block;
   }
+
+  /* 关键:WinUI 组件里大量图标元素(<span class="icon"> 等)不通过 --SymbolThemeFontFamily 取字体,
+     而是依赖这条全局规则(原 WinUIonWeb gallery App.vue 自带,删 gallery 时被一并删除)。
+     必须恢复,否则这些元素退化为继承字体(Segoe UI 无 PUA 字形),全部显示为豆腐块。 */
+  body .icon,
+  body .icon-btn,
+  body .ptr-icon-wrapper,
+  body .symbol-icon,
+  body .win-symbol-icon,
+  body .win-asb-icon,
+  body .picker-icon,
+  body .checkbox-glyph,
+  body .win-combo-chevron,
+  body .win-cbf-icon,
+  body .win-cbf-overflow-icon,
+  body .win-expander-header-icon,
+  body .win-expander-arrow,
+  body .infobadge-icon,
+  body .close-icon,
+  body .win-menu-flyout-icon,
+  body .win-menu-flyout-check,
+  body .win-menu-flyout-check-placeholder,
+  body .win-menu-flyout-chevron,
+  body .win-number-spin-button span,
+  body .win-number-compact-indicator span,
+  body .win-number-popup-button span,
+  body .win-password-reveal span,
+  body .win-rating-glyph,
+  body .scrollbar-button,
+  body .win-settings-card-icon,
+  body .win-settings-card-action-icon,
+  body .win-teaching-tip-icon,
+  body .win-teaching-tip-close,
+  body .win-textbox-delete-glyph,
+  body .font-icon,
+  body .icon-glyph,
+  body .icon-preview-glyph,
+  body .group-icon,
+  body .tree-icon {
+    font-family: 'Segoe Fluent Icons';
+  }
 </style>
