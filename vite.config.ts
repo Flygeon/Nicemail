@@ -16,5 +16,9 @@ export default defineConfig({
         target: 'es2021',
         minify: 'esbuild',
         sourcemap: false,
+        // SEGOEICONS.TTF(464KB)内嵌为 base64 进 CSS:
+        // Tauri 打包后的自定义协议对 .ttf 的 MIME 处理会导致 WebView2 拒绝加载图标字体,
+        // 内嵌后完全绕开文件请求,任何平台都能渲染图标。
+        assetsInlineLimit: 524288,
     }
 })
