@@ -66,17 +66,15 @@
           <!-- OAuth2 -->
           <template v-else>
             <p class="wz-hint">{{ t(preset.hintKey) }}</p>
-            <template v-if="oauthConfigured">
-              <WinButton
-                Style="{StaticResource AccentButtonStyle}"
-                :IsEnabled="!oauthWaiting"
-                @Click="startOAuth">
-                <span class="icon-glyph" aria-hidden="true">&#xE8D7;</span>
-                {{ t('wizard.oauthLogin', { provider: t(preset.labelKey) }) }}
-              </WinButton>
-            </template>
+            <WinButton
+              Style="{StaticResource AccentButtonStyle}"
+              :IsEnabled="!oauthWaiting"
+              @Click="startOAuth">
+              <span class="icon-glyph" aria-hidden="true">&#xE8D7;</span>
+              {{ t('wizard.oauthLogin', { provider: t(preset.labelKey) }) }}
+            </WinButton>
             <WinInfoBar
-              v-else
+              v-if="!oauthConfigured"
               :IsOpen="true"
               :Title="t('wizard.oauthNotConfigured')"
               :Message="t('wizard.oauthNotConfiguredHint')"
@@ -174,7 +172,7 @@ import * as actions from '../actions';
 import * as api from '../api';
 import { PROVIDERS, CUSTOM_PRESET, presetByProvider } from '../providers';
 import type { ProviderPreset } from '../providers';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { openUrl, openPath } from '@tauri-apps/plugin-opener';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 
 const { t } = useI18n();
@@ -214,7 +212,7 @@ const oauthConfigured = computed(() => {
   return false;
 });
 
-const canAdd = computed(() => !testing.value && !adding.value && testResult.value?.ok === true);
+const canAdd = computed(() => !testing.value && !adding.value);
 
 function selectProvider(p: ProviderPreset): void {
   preset.value = p;
@@ -276,12 +274,23 @@ function buildDraft(): api.AccountDraft {
   };
 }
 
+/** 给 Promise 加超时(防止 accountTest 因网络问题无限挂起,按钮卡死在"正在验证") */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 async function onTest(): Promise<void> {
   if (!validate()) return;
   testing.value = true;
   testResult.value = null;
   try {
-    testResult.value = await api.accountTest(buildDraft());
+    testResult.value = await withTimeout(api.accountTest(buildDraft()), 40000, t('wizard.timeout'));
   } catch (err) {
     testResult.value = { ok: false, message: String(err) };
   } finally {
@@ -310,6 +319,14 @@ async function onAdd(): Promise<void> {
 async function startOAuth(): Promise<void> {
   if (preset.value.key !== 'gmail' && preset.value.key !== 'outlook') return;
   const provider = preset.value.key;
+  // 未配置 clientId:引导用户打开申请文档,而不是让按钮"没反应"
+  if (!oauthConfigured.value) {
+    try {
+      await openPath('docs/OAuth.md');
+    } catch { /* 文档打不开时忽略 */ }
+    showError(t('wizard.oauthNotConfiguredHint'));
+    return;
+  }
   try {
     const { authUrl } = await api.oauthStart(provider);
     await openUrl(authUrl);

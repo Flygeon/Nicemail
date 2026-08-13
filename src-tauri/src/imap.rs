@@ -3,7 +3,7 @@
 //! 阻塞式 API,由 commands 层用 spawn_blocking 包裹。
 
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{ToSocketAddrs, TcpStream};
 use std::time::Duration;
 
 use imap::types::{NameAttribute, StatusAttribute, UnsolicitedResponse};
@@ -38,13 +38,29 @@ impl imap::Authenticator for XOAuth2 {
 }
 
 /// 建立连接。ssl=true 直连 TLS;ssl=false 尝试 STARTTLS,失败则回退明文。
+/// 解析主机名 + 带超时的 TCP 连接,并设置读写超时。
+fn connect_tcp(host: &str, port: u16) -> Result<TcpStream, Error> {
+    let addr = (host, port)
+        .to_socket_addrs()
+        .map_err(Error::Io)?
+        .next()
+        .ok_or_else(|| {
+            Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("无法解析主机名 {host}"),
+            ))
+        })?;
+    let tcp = TcpStream::connect_timeout(&addr, Duration::from_secs(20))?;
+    tcp.set_read_timeout(Some(Duration::from_secs(30)))?;
+    tcp.set_write_timeout(Some(Duration::from_secs(30)))?;
+    Ok(tcp)
+}
+
 pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
     let host = account.imap_host.clone();
     let port = account.imap_port;
     let tls = TlsConnector::builder().build()?;
-    let tcp = TcpStream::connect((host.as_str(), port))?;
-    tcp.set_read_timeout(Some(Duration::from_secs(120)))?;
-    tcp.set_write_timeout(Some(Duration::from_secs(120)))?;
+    let tcp = connect_tcp(&host, port)?;
 
     if account.imap_ssl {
         let stream = tls
@@ -66,7 +82,7 @@ pub fn connect(account: &AccountConfig) -> Result<ImapClient, Error> {
         match client.secure(&host, &tls) {
             Ok(sec) => Ok(ImapClient::Tls(sec)),
             Err(_) => {
-                let tcp2 = TcpStream::connect((host.as_str(), port))?;
+                let tcp2 = connect_tcp(&host, port)?;
                 let mut c2 = Client::new(tcp2);
                 c2.read_greeting().map_err(Error::Imap)?;
                 Ok(ImapClient::Plain(c2))

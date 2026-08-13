@@ -79,6 +79,7 @@ export default {
   'wizard.testConnection': 'Test connection',
   'wizard.test': 'Test & add',
   'wizard.testFailed': 'Connection failed: {message}',
+  'wizard.timeout': 'Connection timed out. Check your network and try again',
   'wizard.testSuccess': 'Connected, account added',
   'wizard.required': 'Please fill in the required fields',
   'wizard.invalidEmail': 'Email format is invalid',

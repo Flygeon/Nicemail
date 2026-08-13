@@ -2,6 +2,8 @@
 //! 465 端口 → 立即 TLS;587 → STARTTLS;其它端口且 smtpSsl=false → 明文。
 //! password 模式用 LOGIN;oauth2 模式用 XOAUTH2(secret 传 access token)。
 
+use std::time::Duration;
+
 use lettre::message::header::ContentType;
 use lettre::message::{Attachment, Mailbox, Message, MultiPart};
 use lettre::transport::smtp::authentication::{Credentials, Mechanism};
@@ -80,7 +82,11 @@ fn build_message(account: &AccountConfig, request: &SendRequest) -> Result<Messa
 fn build_transport(account: &AccountConfig, secret: &str) -> Result<SmtpTransport, Error> {
     let host = account.smtp_host.clone();
     let port = account.smtp_port;
-    let mut builder = SmtpTransport::builder_dangerous(host.clone()).port(port);
+    let mut builder = SmtpTransport::builder_dangerous(host.clone())
+        .port(port)
+        // 关键:lettre 默认无连接超时,服务器接受 TCP 但不回 greeting 时会无限挂起,
+        // 导致 account_test/发送永远不返回、前端按钮卡死。给 25s 超时。
+        .timeout(Some(Duration::from_secs(25)));
 
     if port == 465 {
         let params = TlsParameters::new(host.clone()).map_err(Error::Smtp)?;

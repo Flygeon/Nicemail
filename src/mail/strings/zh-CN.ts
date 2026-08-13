@@ -79,6 +79,7 @@ export default {
   'wizard.testConnection': '测试连接',
   'wizard.test': '验证并添加',
   'wizard.testFailed': '连接失败:{message}',
+  'wizard.timeout': '连接超时,请检查网络后重试',
   'wizard.testSuccess': '连接成功,账号已添加',
   'wizard.required': '请填写必填项',
   'wizard.invalidEmail': '邮箱格式不正确',
