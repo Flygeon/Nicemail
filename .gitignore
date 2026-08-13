@@ -1,0 +1,51 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/gen/schemas
+
+# 参考源码(已集成进 src/,仅本地参考用)与本地会话配置
+/ui参考/
+.claude/
+
+# 图标源文件可重新生成
+app-icon.png
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.tsbuildinfo
+
+.eslintcache
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest
+__screenshots__/
+
+# Vite
+.vite/
+*.timestamp-*-*.mjs

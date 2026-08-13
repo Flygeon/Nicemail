@@ -1,0 +1,190 @@
+/* ────────────────────── Nicemail 布局样式 ────────────────────── */
+
+.mail-root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--NavigationViewContentBackground, var(--layer-default));
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* ── 标题栏 ── */
+.mail-titlebar {
+  flex: 0 0 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 12px;
+  box-sizing: border-box;
+  background: transparent;
+  color: var(--text-primary);
+  user-select: none;
+  -webkit-app-region: drag;
+  app-region: drag;
+  border-bottom: 1px solid var(--stroke-divider, rgba(0, 0, 0, 0.06));
+}
+
+.mail-titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.mail-titlebar-logo {
+  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-size: 16px;
+  color: var(--accent-base);
+}
+
+.mail-titlebar-title {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mail-titlebar-search {
+  flex: 1 1 auto;
+  min-width: 120px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.mail-titlebar-window-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.mail-titlebar-window-controls .win-btn {
+  box-sizing: border-box;
+  width: 46px;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 10px;
+  transition: background var(--fast-duration, 0.15s) var(--fast-out-slow-in, ease-out);
+}
+
+.mail-titlebar-window-controls .win-btn span {
+  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-size: 10px;
+  line-height: 1;
+}
+
+.mail-titlebar-window-controls .win-btn:hover {
+  background: var(--subtle-secondary, rgba(0, 0, 0, 0.04));
+}
+
+.mail-titlebar-window-controls .win-btn:active {
+  background: var(--subtle-tertiary, rgba(0, 0, 0, 0.06));
+}
+
+.mail-titlebar-window-controls .win-btn-close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ── 主体 ── */
+.mail-app-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
+.mail-app-body > .win-nav-shell {
+  width: 100%;
+  height: 100%;
+}
+
+.mail-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── 空状态 ── */
+.mail-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.mail-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.mail-empty-icon {
+  font-family: var(--SymbolThemeFontFamily, 'WinUIOnWebIcons');
+  font-size: 40px;
+  color: var(--text-tertiary);
+}
+
+.mail-empty h2 {
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.mail-empty p {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+
+/* ── 邮件三栏 ── */
+.mail-panes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 写信覆盖层盖住右侧阅读区 */
+.mail-panes > .compose-pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 340px;
+  z-index: 30;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 900px) {
+  .mail-panes {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  }
+  .mail-panes > .compose-pane {
+    left: 300px;
+  }
+}

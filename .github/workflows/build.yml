@@ -1,0 +1,75 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # tauri-action 会自动执行 tauri.conf.json 的 beforeBuildCommand(npm run build)
+      - name: Build & bundle (tauri-action)
+        uses: tauri-apps/tauri-action@v0
+        id: tauri
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Nicemail v__VERSION__'
+          releaseBody: 'Nicemail 自动构建产物。安装说明见 README。'
+          releaseDraft: true
+          prerelease: false
+
+      # 非 tag 构建也把安装包作为 artifact 上传,便于直接从 Actions 下载
+      - name: Upload artifacts
+        if: steps.tauri.outputs.artifactPath != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nicemail-${{ matrix.platform }}
+          path: |
+            ${{ steps.tauri.outputs.artifactPath }}
+          if-no-files-found: error
