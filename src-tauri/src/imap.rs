@@ -243,24 +243,24 @@ where
     if mailbox.exists > 0 {
         let set = format!("{start}:*");
         let query = "(UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID)])";
-        if let Ok(fetches) = session.uid_fetch(&set, query) {
-            let total = fetches.len() as i64;
-            for (i, f) in fetches.iter().enumerate() {
-                if let Some(uid) = f.uid {
-                    let flags: Vec<String> = f.flags().iter().map(|x| x.to_string()).collect();
-                    let header = f.header().unwrap_or_default();
-                    let msg = mime::parse_header(&account.id, folder, uid, &flags, header);
-                    let existed = db.get_message_by_uid(&account.id, folder, uid)?.is_some();
-                    db.upsert_message(&msg)?;
-                    if existed {
-                        updated += 1;
-                    } else {
-                        added += 1;
-                    }
-                    new_uids.push(uid);
+        // 头部拉取失败必须显式报错,否则同步"成功"却 0 封邮件,前端无感知
+        let fetches = session.uid_fetch(&set, query).map_err(Error::Imap)?;
+        let total = fetches.len() as i64;
+        for (i, f) in fetches.iter().enumerate() {
+            if let Some(uid) = f.uid {
+                let flags: Vec<String> = f.flags().iter().map(|x| x.to_string()).collect();
+                let header = f.header().unwrap_or_default();
+                let msg = mime::parse_header(&account.id, folder, uid, &flags, header);
+                let existed = db.get_message_by_uid(&account.id, folder, uid)?.is_some();
+                db.upsert_message(&msg)?;
+                if existed {
+                    updated += 1;
+                } else {
+                    added += 1;
                 }
-                progress(i as i64 + 1, total);
+                new_uids.push(uid);
             }
+            progress(i as i64 + 1, total);
         }
     }
 

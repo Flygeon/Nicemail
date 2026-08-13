@@ -3,7 +3,7 @@ import * as api from './api';
 import {
   accounts, folders, messages, messageDetail, selectedMessageId,
   selection, view, composeOpen, loadingMessages, loadingDetail, syncing,
-  resetMailView,
+  resetMailView, showToast,
 } from './state';
 
 let activeSyncToken = 0;
@@ -88,6 +88,7 @@ export async function refreshCurrentFolder(): Promise<void> {
     await refreshUnreadCounts(selection.accountId);
   } catch (err) {
     console.error('同步失败:', err);
+    showToast(`同步失败: ${String(err)}`);
   } finally {
     if (token === activeSyncToken) syncing.value = false;
   }
