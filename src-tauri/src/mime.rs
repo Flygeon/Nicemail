@@ -144,6 +144,19 @@ pub fn preview_from_text(text: &str) -> String {
 
 // ── 内部辅助 ──
 
+/// 截断字符串到最大字符数(在字符边界切,避免破坏 UTF-8)。
+fn cap_str(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        let mut end = max;
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        s[..end].to_string()
+    }
+}
+
 fn extract_bodies(msg: &Message<'_>) -> (Option<String>, Option<String>) {
     let mut html: Option<String> = None;
     let mut text: Option<String> = None;
@@ -154,7 +167,7 @@ fn extract_bodies(msg: &Message<'_>) -> (Option<String>, Option<String>) {
         }
         if let Some(part) = msg.parts.get(pid) {
             if let PartType::Html(s) = &part.body {
-                html = Some(s.to_string());
+                html = Some(cap_str(s, 500_000));
             }
         }
     }
@@ -165,10 +178,10 @@ fn extract_bodies(msg: &Message<'_>) -> (Option<String>, Option<String>) {
         if let Some(part) = msg.parts.get(pid) {
             match &part.body {
                 PartType::Text(s) => {
-                    text = Some(s.to_string());
+                    text = Some(cap_str(s, 500_000));
                 }
                 PartType::Html(s) if html.is_none() => {
-                    html = Some(s.to_string());
+                    html = Some(cap_str(s, 500_000));
                 }
                 _ => {}
             }
@@ -177,7 +190,7 @@ fn extract_bodies(msg: &Message<'_>) -> (Option<String>, Option<String>) {
     if html.is_none() {
         for part in &msg.parts {
             if let PartType::Html(s) = &part.body {
-                html = Some(s.to_string());
+                html = Some(cap_str(s, 500_000));
                 break;
             }
         }

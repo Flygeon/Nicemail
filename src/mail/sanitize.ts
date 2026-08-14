@@ -71,7 +71,9 @@ function sanitizeNode(node: Node, doc: Document, output: HTMLElement): void {
  */
 export function sanitizeHtml(raw: string): string {
   if (!raw) return '';
-  const doc = new DOMParser().parseFromString(raw, 'text/html');
+  // 超大 HTML(几 MB)在主线程 DOMParser 解析会卡死,截断到合理大小
+  const input = raw.length > 400_000 ? raw.slice(0, 400_000) : raw;
+  const doc = new DOMParser().parseFromString(input, 'text/html');
   const output = doc.createElement('div');
   sanitizeNode(doc.body, doc, output);
   return output.innerHTML;

@@ -310,7 +310,7 @@ where
     let top: Vec<String> = new_uids.iter().take(15).map(|u| u.to_string()).collect();
     if !top.is_empty() {
         let set = top.join(",");
-        if let Ok(fetches) = session.uid_fetch(&set, "(UID FLAGS BODY.PEEK[]<0.3000000>)") {
+        if let Ok(fetches) = session.uid_fetch(&set, "(UID FLAGS BODY.PEEK[]<0.1500000>)") {
             for f in fetches.iter() {
                 if let Some(uid) = f.uid {
                     if let Some(body) = f.body() {
@@ -354,7 +354,7 @@ fn fetch_message_session<T: Read + Write>(
     // 只拉前 3MB:正文/文字通常在前面,避免大附件邮件整封加载导致内存暴涨/卡死。
     // 附件下载用 fetch_message_full 全量拉取。
     let fetches = session
-        .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[]<0.3000000>)")
+        .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[]<0.1500000>)")
         .map_err(Error::Imap)?;
     let fetch = fetches
         .iter()

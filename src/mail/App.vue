@@ -77,9 +77,9 @@
 
     <!-- 全局轻提示(WinUI 风格) -->
     <Transition name="toast">
-      <div v-if="state.toastVisible" class="mail-toast" role="status">
+      <div v-if="toastVisible" class="mail-toast" role="status">
         <span class="icon-glyph mail-toast-icon" aria-hidden="true">&#xE73E;</span>
-        <span class="mail-toast-text">{{ state.toastMessage }}</span>
+        <span class="mail-toast-text">{{ toastMessage }}</span>
       </div>
     </Transition>
   </div>
@@ -93,6 +93,7 @@ import WinAutoSuggestBox from '../components/WinAutoSuggestBox.vue';
 import WinNavigationView from '../components/WinNavigationView.vue';
 
 import * as state from './state';
+import { toastVisible, toastMessage } from './state';
 import * as actions from './actions';
 import { accountList } from './api';
 import { onMailChanged } from './api';
