@@ -121,13 +121,16 @@ export async function removeAccount(accountId: string): Promise<void> {
 }
 
 export async function selectMessage(summary: { id: number }): Promise<void> {
+  api.webLog(`选中邮件 id=${summary.id}`);
   selectedMessageId.value = summary.id;
   if (!selection.accountId || !selection.folder) return;
   loadingDetail.value = true;
   try {
     const summary2 = messages.value.find((m) => m.id === summary.id);
     if (!summary2) return;
+    api.webLog(`调用 mail_get uid=${summary2.uid}`);
     const detail = await api.mailGet(selection.accountId, selection.folder, summary2.uid);
+    api.webLog(`mail_get 返回 html=${detail.html?.length ?? 0} text=${detail.text?.length ?? 0}`);
     messageDetail.value = detail;
     if (summary2.unread) {
       // 标记已读(本地 + 服务器)
@@ -137,6 +140,7 @@ export async function selectMessage(summary: { id: number }): Promise<void> {
     }
   } catch (err) {
     console.error('加载邮件失败:', err);
+    api.webLog(`加载邮件失败: ${String(err)}`);
     showToast(`加载邮件失败: ${String(err)}`);
   } finally {
     loadingDetail.value = false;

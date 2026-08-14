@@ -189,6 +189,12 @@ export const mailSaveDraft = (accountId: string, request: SendRequest) =>
 export const settingsGet = () => invoke<Record<string, string>>('settings_get');
 export const settingsSet = (key: string, value: string) => invoke<void>('settings_set', { key, value });
 
+// ── 调试 ──
+/** 前端埋点日志,写入 app.log(定位卡死) */
+export const webLog = (msg: string): void => {
+  invoke('log_msg', { msg }).catch(() => {});
+};
+
 /* ─────────────────────────── 事件 ─────────────────────────── */
 
 export interface SyncProgressEvent { accountId: string; folder: string; processed: number; total: number }

@@ -478,6 +478,12 @@ pub async fn mail_save_draft(account_id: String, request: SendRequest) -> Result
 
 // ── 设置 ──
 
+/// 前端埋点日志(追加写 app.log,定位前端卡死位置)。
+#[tauri::command]
+pub fn log_msg(msg: String) {
+    crate::log_msg(&format!("[web] {}", msg));
+}
+
 #[tauri::command]
 pub async fn settings_get() -> Result<HashMap<String, String>, String> {
     spawn(move || {
