@@ -2,7 +2,6 @@
 //! 凭据文件 oauth_config.json 位于 app data dir,只要求 clientId(public client)。
 
 use std::collections::HashMap;
-use std::io::Read;
 use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 

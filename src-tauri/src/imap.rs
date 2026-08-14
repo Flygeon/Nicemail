@@ -375,21 +375,29 @@ pub fn fetch_message_full(
     folder: &str,
     uid: u32,
 ) -> Result<(Vec<u8>, Vec<String>), Error> {
-    dispatch!(client, account, secret, |session| -> Result<(Vec<u8>, Vec<String>), Error> {
-        session.select(folder).map_err(Error::Imap)?;
-        let fetches = session
-            .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[])")
-            .map_err(Error::Imap)?;
-        let fetch = fetches
-            .iter()
-            .find(|f| f.uid == Some(uid))
-            .ok_or_else(|| Error::Imap(imap::Error::No("消息不存在".into())))?;
-        let body = fetch
-            .body()
-            .ok_or_else(|| Error::Imap(imap::Error::No("消息体为空".into())))?;
-        let flags: Vec<String> = fetch.flags().iter().map(|f| f.to_string()).collect();
-        Ok((body.to_vec(), flags))
-    })
+    dispatch!(client, account, secret, |session| fetch_message_full_session(
+        session, folder, uid,
+    ))
+}
+
+fn fetch_message_full_session<T: Read + Write>(
+    session: &mut Session<T>,
+    folder: &str,
+    uid: u32,
+) -> Result<(Vec<u8>, Vec<String>), Error> {
+    session.select(folder).map_err(Error::Imap)?;
+    let fetches = session
+        .uid_fetch(&uid.to_string(), "(UID FLAGS BODY.PEEK[])")
+        .map_err(Error::Imap)?;
+    let fetch = fetches
+        .iter()
+        .find(|f| f.uid == Some(uid))
+        .ok_or_else(|| Error::Imap(imap::Error::No("消息不存在".into())))?;
+    let body = fetch
+        .body()
+        .ok_or_else(|| Error::Imap(imap::Error::No("消息体为空".into())))?;
+    let flags: Vec<String> = fetch.flags().iter().map(|f| f.to_string()).collect();
+    Ok((body.to_vec(), flags))
 }
 
 /// 设置 flags(+/-)。同时更新本地 DB。
