@@ -221,7 +221,7 @@ pub async fn oauth_finish(
 // ── 文件夹与邮件 ──
 
 #[tauri::command]
-pub async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> {
+pub async fn mailbox_list(account_id: String) -> Result<Vec<Folder>, String> { crate::log_msg("mailbox_list");
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -240,6 +240,7 @@ pub async fn mail_sync(
     account_id: String,
     folder: String,
 ) -> Result<SyncResult, String> {
+    crate::log_msg(&format!(">> mail_sync folder={}", folder));
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db
@@ -288,7 +289,7 @@ pub async fn mail_list(
     folder: String,
     offset: i64,
     limit: i64,
-) -> Result<Vec<MessageSummary>, String> {
+) -> Result<Vec<MessageSummary>, String> { crate::log_msg("mail_list");
     spawn(move || {
         let db = Db::open(&db_path())?;
         db.list_messages(&account_id, &folder, offset, limit)
@@ -302,6 +303,7 @@ pub async fn mail_get(
     folder: String,
     uid: u32,
 ) -> Result<MessageDetail, String> {
+    crate::log_msg(&format!(">> mail_get uid={} folder={}", uid, folder));
     let fut = spawn(move || mail_get_impl(&account_id, &folder, uid));
     // 防御:mail-parser 对个别畸形邮件可能异常,40s 超时兜底而非无限卡住
     match tokio::time::timeout(std::time::Duration::from_secs(40), fut).await {
@@ -312,7 +314,6 @@ pub async fn mail_get(
 
 fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDetail, Error> {
     let start = std::time::Instant::now();
-    log::info!("mail_get start uid={} folder={}", uid, folder);
     let db = Db::open(&db_path())?;
     let account = db
         .get_account(account_id)?
@@ -323,24 +324,32 @@ fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDeta
             let secret = account_secret(&account, &db)?;
             let t = std::time::Instant::now();
             let client = crate::imap::connect(&account)?;
-            log::info!("mail_get connect {}ms", t.elapsed().as_millis());
+            crate::log_msg(&format!("  mail_get connect {}ms", t.elapsed().as_millis()));
             let t = std::time::Instant::now();
             let (raw, flags) = crate::imap::fetch_message(client, &account, &secret, folder, uid)?;
-            log::info!("mail_get fetch {}ms raw={}B", t.elapsed().as_millis(), raw.len());
+            crate::log_msg(&format!(
+                "  mail_get fetch {}ms raw={}B",
+                t.elapsed().as_millis(),
+                raw.len()
+            ));
             let t = std::time::Instant::now();
             let msg = crate::mime::parse_full(account_id, folder, uid, &flags, &raw);
-            log::info!("mail_get parse {}ms", t.elapsed().as_millis());
+            crate::log_msg(&format!(
+                "  mail_get parse {}ms html={}B",
+                t.elapsed().as_millis(),
+                msg.html.as_ref().map(|s| s.len()).unwrap_or(0)
+            ));
             let t = std::time::Instant::now();
             db.upsert_message(&msg)?;
-            log::info!("mail_get upsert {}ms", t.elapsed().as_millis());
+            crate::log_msg(&format!("  mail_get upsert {}ms", t.elapsed().as_millis()));
             msg
         }
     };
-    log::info!(
-        "mail_get done uid={} total={}ms",
+    crate::log_msg(&format!(
+        "<< mail_get done uid={} total={}ms",
         uid,
         start.elapsed().as_millis()
-    );
+    ));
     Ok(stored.to_detail())
 }
 
@@ -351,7 +360,7 @@ pub async fn mail_set_flag(
     uids: Vec<u32>,
     flag: String,
     value: bool,
-) -> Result<(), String> {
+) -> Result<(), String> { crate::log_msg("mail_set_flag");
     spawn(move || {
         let db = Db::open(&db_path())?;
         let account = db

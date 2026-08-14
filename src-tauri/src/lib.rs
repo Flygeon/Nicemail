@@ -35,6 +35,21 @@ pub fn secret_db_set(key: &str, value: &str) {
     }
 }
 
+/// 可靠的自定义日志:直接追加写 app data dir/app.log(不依赖插件,保证可用)。
+static LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn log_msg(msg: &str) {
+    if let Some(path) = LOG_FILE.get() {
+        use std::io::Write;
+        let line = format!("[{}] {}\n", chrono::Utc::now().format("%H:%M:%S%.3f"), msg);
+        let _ = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .and_then(|mut f| f.write_all(line.as_bytes()));
+    }
+}
+
 /// panic 也写一份到 app data dir/panic.log,方便定位闪退。
 fn setup_panic_hook() {
     let default = std::panic::take_hook();
@@ -84,7 +99,8 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            let _ = DATA_DIR.set(dir);
+            let _ = DATA_DIR.set(dir.clone());
+            let _ = LOG_FILE.set(dir.join("app.log"));
             ensure_oauth_config();
             Ok(())
         })
