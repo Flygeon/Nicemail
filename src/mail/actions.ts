@@ -135,6 +135,9 @@ export async function selectMessage(summary: { id: number }): Promise<void> {
       summary2.unread = false;
       summary2.flags = summary2.flags.includes('\\Seen') ? summary2.flags : [...summary2.flags, '\\Seen'];
     }
+  } catch (err) {
+    console.error('加载邮件失败:', err);
+    showToast(`加载邮件失败: ${String(err)}`);
   } finally {
     loadingDetail.value = false;
   }

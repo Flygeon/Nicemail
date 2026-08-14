@@ -302,10 +302,17 @@ pub async fn mail_get(
     folder: String,
     uid: u32,
 ) -> Result<MessageDetail, String> {
-    spawn(move || mail_get_impl(&account_id, &folder, uid)).await
+    let fut = spawn(move || mail_get_impl(&account_id, &folder, uid));
+    // 防御:mail-parser 对个别畸形邮件可能异常,40s 超时兜底而非无限卡住
+    match tokio::time::timeout(std::time::Duration::from_secs(40), fut).await {
+        Ok(r) => r,
+        Err(_) => Err("邮件加载超时(40s),请查看日志定位具体邮件".into()),
+    }
 }
 
 fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDetail, Error> {
+    let start = std::time::Instant::now();
+    log::info!("mail_get start uid={} folder={}", uid, folder);
     let db = Db::open(&db_path())?;
     let account = db
         .get_account(account_id)?
@@ -314,13 +321,26 @@ fn mail_get_impl(account_id: &str, folder: &str, uid: u32) -> Result<MessageDeta
         Some(m) if m.raw.is_some() => m,
         _ => {
             let secret = account_secret(&account, &db)?;
+            let t = std::time::Instant::now();
             let client = crate::imap::connect(&account)?;
+            log::info!("mail_get connect {}ms", t.elapsed().as_millis());
+            let t = std::time::Instant::now();
             let (raw, flags) = crate::imap::fetch_message(client, &account, &secret, folder, uid)?;
+            log::info!("mail_get fetch {}ms raw={}B", t.elapsed().as_millis(), raw.len());
+            let t = std::time::Instant::now();
             let msg = crate::mime::parse_full(account_id, folder, uid, &flags, &raw);
+            log::info!("mail_get parse {}ms", t.elapsed().as_millis());
+            let t = std::time::Instant::now();
             db.upsert_message(&msg)?;
+            log::info!("mail_get upsert {}ms", t.elapsed().as_millis());
             msg
         }
     };
+    log::info!(
+        "mail_get done uid={} total={}ms",
+        uid,
+        start.elapsed().as_millis()
+    );
     Ok(stored.to_detail())
 }
 
