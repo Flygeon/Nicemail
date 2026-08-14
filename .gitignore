@@ -49,3 +49,4 @@ __screenshots__/
 # Vite
 .vite/
 *.timestamp-*-*.mjs
+vue-tsc
