@@ -132,6 +132,7 @@ export async function selectMessage(summary: { id: number }): Promise<void> {
     const detail = await api.mailGet(selection.accountId, selection.folder, summary2.uid);
     api.webLog(`mail_get 返回 html=${detail.html?.length ?? 0} text=${detail.text?.length ?? 0}`);
     messageDetail.value = detail;
+    api.webLog('detail 已设置');
     if (summary2.unread) {
       // 标记已读(本地 + 服务器)
       await api.mailSetFlag(selection.accountId, selection.folder, [summary2.uid], '\\Seen', true);

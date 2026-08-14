@@ -69,7 +69,7 @@
         </div>
 
         <!-- 远程图片拦截横幅 -->
-        <div v-if="hasRemoteBlocked" class="rp-remote-banner">
+        <div v-if="hasRemoteBlocked && !showRemote" class="rp-remote-banner">
           <span class="icon-glyph rp-remote-icon" aria-hidden="true">&#xE7B3;</span>
           <span class="rp-remote-text">{{ t('mail.remoteBlocked') }}</span>
           <button
@@ -85,7 +85,7 @@
           v-if="detail.html"
           ref="bodyRef"
           class="rp-body"
-          :class="{ 'remote-blocked': hasRemoteBlocked }"
+          :class="{ 'remote-blocked': hasRemoteBlocked && !showRemote }"
           v-html="bodyHtml"
           @click="onBodyClick"></div>
         <div v-else-if="detail.text" class="rp-body rp-body-text">{{ detail.text }}</div>
@@ -172,10 +172,17 @@ function showInfo(title: string, message: string, severity: 'Informational' | 'S
   }
 }
 
-/* ── 正文处理:净化 + 内嵌图 + 远程图片拦截 ── */
+/* ── 正文处理:净化 + 内嵌图(纯计算,无副作用,避免响应式循环) ── */
 const bodyRef = ref<HTMLElement | null>(null);
-const remoteBlockedCount = ref(0);
-const hasRemoteBlocked = computed(() => remoteBlockedCount.value > 0);
+/** 用户是否已手动显示远程图片 */
+const showRemote = ref(false);
+
+/** 检测 html 里是否有 http(s) 远程图片 */
+const hasRemoteBlocked = computed(() => {
+  const d = detail.value;
+  if (!d?.html) return false;
+  return /<img[^>]+src\s*=\s*["']https?:/i.test(d.html);
+});
 
 const bodyHtml = computed(() => {
   const d = detail.value;
@@ -186,32 +193,11 @@ const bodyHtml = computed(() => {
   for (const [cid, dataUrl] of entries.slice(0, 20)) {
     html = html.split(`cid:${cid}`).join(dataUrl);
   }
-  // 用 DOM 精确拦截 http(s) 远程图片:src 移到 data-remote
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = html;
-  remoteBlockedCount.value = 0;
-  const imgs = Array.from(wrapper.querySelectorAll('img'));
-  for (const img of imgs) {
-    const src = img.getAttribute('src') ?? '';
-    if (/^https?:\/\//i.test(src)) {
-      img.setAttribute('data-remote', src);
-      img.removeAttribute('src');
-      remoteBlockedCount.value++;
-    }
-  }
-  return wrapper.innerHTML;
+  return html;
 });
 
 function showRemoteImages(): void {
-  const el = bodyRef.value;
-  if (el) {
-    el.querySelectorAll('img[data-remote]').forEach((img) => {
-      const src = img.getAttribute('data-remote');
-      if (src) img.setAttribute('src', src);
-      img.removeAttribute('data-remote');
-    });
-  }
-  remoteBlockedCount.value = 0;
+  showRemote.value = true;
 }
 
 /* ── 正文链接拦截,交给系统浏览器 ── */
@@ -536,8 +522,10 @@ function formatFullDate(ts: number): string {
   color: var(--text-secondary);
 }
 
-/* 只隐藏被拦截(无 src)的远程图片,保留内嵌 data URL 图片 */
-.rp-body.remote-blocked :deep(img:not([src])) {
+/* 拦截远程图片:用 CSS 隐藏 http(s) 图(纯 CSS,无 JS 副作用),
+   点「显示远程图片」移除 remote-blocked 类后自动恢复 */
+.rp-body.remote-blocked :deep(img[src^="http://"]),
+.rp-body.remote-blocked :deep(img[src^="https://"]) {
   visibility: hidden;
 }
 
