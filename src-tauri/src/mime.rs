@@ -205,6 +205,7 @@ fn extract_attachments(
     let cids = collect_cids(html.unwrap_or(""));
     let mut attachments = Vec::new();
     let mut embedded = HashMap::new();
+    let mut total_embedded = 0usize;
     let mut index = 0usize;
 
     for &part_id in &msg.attachments {
@@ -250,9 +251,10 @@ fn extract_attachments(
 
         if (is_inline && content_id.is_some()) || referenced {
             if let Some(cid) = content_id {
-                // 超大内嵌图不做 base64 编码,避免响应体暴涨卡死(前端显示为缺失图)
-                if bytes.len() < 1_500_000 {
+                // 超大/过多内嵌图不做 base64 编码,避免响应体暴涨卡死(前端显示为缺失图)
+                if bytes.len() < 1_500_000 && total_embedded + bytes.len() < 4_000_000 {
                     let b64 = general_purpose::STANDARD.encode(&bytes);
+                    total_embedded += bytes.len();
                     embedded.insert(cid, format!("data:{mime};base64,{b64}"));
                 }
             }

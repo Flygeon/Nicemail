@@ -181,8 +181,9 @@ const bodyHtml = computed(() => {
   const d = detail.value;
   if (!d || !d.html) return '';
   let html = sanitizeHtml(d.html);
-  // 把 cid:xxx 替换成内嵌 data URL
-  for (const [cid, dataUrl] of Object.entries(d.embedded ?? {})) {
+  // 把 cid:xxx 替换成内嵌 data URL(限数量,防止几十张图循环 split/join 卡顿)
+  const entries = Object.entries(d.embedded ?? {});
+  for (const [cid, dataUrl] of entries.slice(0, 20)) {
     html = html.split(`cid:${cid}`).join(dataUrl);
   }
   // 用 DOM 精确拦截 http(s) 远程图片:src 移到 data-remote
