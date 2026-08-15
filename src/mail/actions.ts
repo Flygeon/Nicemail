@@ -8,22 +8,35 @@ import {
 
 let activeSyncToken = 0;
 
-/** 应用启动:拉账号、定默认选区 */
+/** 拉取某个账号的文件夹树并缓存(供导航/切换使用) */
+async function loadFolders(accountId: string): Promise<api.Folder[]> {
+  const list = await api.mailboxList(accountId);
+  folders.value[accountId] = list;
+  return list;
+}
+
+/** 应用启动:拉账号、预加载所有账号的文件夹树、恢复上次选中账号 */
 export async function init(): Promise<void> {
   accounts.value = await api.accountList();
   if (accounts.value.length === 0) return;
-  const first = accounts.value[0];
-  await selectAccount(first.id);
+  // 预加载所有账号的文件夹树:否则只有默认账号在左侧导航有子项,
+  // 其他账号(如 163)点开是空节点,无法切换、看不到分类与邮件。
+  await Promise.allSettled(accounts.value.map((acc) => loadFolders(acc.id)));
+  // 恢复上次选中的账号(本地记忆),没有则用第一个
+  const lastId = localStorage.getItem('nicemail.last-account');
+  const target = accounts.value.find((acc) => acc.id === lastId) ?? accounts.value[0];
+  await selectAccount(target.id);
 }
 
 export async function selectAccount(accountId: string): Promise<void> {
   const acc = accounts.value.find((a) => a.id === accountId);
   if (!acc) return;
   selection.accountId = accountId;
+  // 记住用户最后使用的账号,下次启动直接恢复
+  try { localStorage.setItem('nicemail.last-account', accountId); } catch { /* ignore */ }
   resetMailView();
   try {
-    const list = await api.mailboxList(accountId);
-    folders.value[accountId] = list;
+    const list = await loadFolders(accountId);
     const inbox = list.find((f) => f.flags.some((x) => x.toLowerCase() === '\\inbox'))
       ?? list.find((f) => f.selectable)
       ?? list[0];

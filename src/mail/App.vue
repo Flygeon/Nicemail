@@ -208,6 +208,16 @@ function onNavInvoked(e: { IsSettingsInvoked: boolean; InvokedItemContainer?: Na
   }
   if (tag === '__add__') { wizardOpen.value = true; return; }
   if (tag === '__settings__') { state.view.value = 'settings'; return; }
+  // 点击左侧账号节点:切换账号(加载其文件夹树)。多账号时只有默认账号的树
+  // 会在启动时加载,其他账号节点是空的,必须点账号本身才能切换过去。
+  if (tag.startsWith('acc:')) {
+    state.view.value = 'mail';
+    const accountId = tag.slice('acc:'.length);
+    if (accountId !== selection.value.accountId) {
+      void actions.selectAccount(accountId);
+    }
+    return;
+  }
   const parsed = parseFolderTag(tag);
   if (parsed) {
     state.view.value = 'mail';
