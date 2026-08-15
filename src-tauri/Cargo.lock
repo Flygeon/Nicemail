@@ -2436,6 +2436,7 @@ dependencies = [
  "tauri-plugin-opener",
  "thiserror 2.0.20",
  "tiny_http",
+ "tokio",
  "ureq",
  "url",
  "uuid",

@@ -49,7 +49,9 @@ dirs = "6"
 tokio = { version = "1", features = ["time"] }
 
 [profile.release]
-panic = "abort"
+# panic=abort 会让 imap crate 的任何断言 panic 直接杀死整个进程(闪退)。
+# 改为 unwind 后,tokio spawn_blocking 会把 panic 转成命令错误返回给前端,应用不崩溃。
+panic = "unwind"
 codegen-units = 1
 lto = true
 opt-level = "s"

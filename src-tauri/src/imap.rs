@@ -163,13 +163,19 @@ macro_rules! dispatch {
             ImapClient::Tls(c) => {
                 let mut session = login(c, $account, $secret)?;
                 let res = ($f)(&mut session);
-                let _ = session.logout();
+                // 操作失败时连接流可能已错位,再发 LOGOUT 会读到残留的旧 tag
+                // 触发 crate 的断言 panic,直接丢弃连接更安全。
+                if res.is_ok() {
+                    let _ = session.logout();
+                }
                 res
             }
             ImapClient::Plain(c) => {
                 let mut session = login(c, $account, $secret)?;
                 let res = ($f)(&mut session);
-                let _ = session.logout();
+                if res.is_ok() {
+                    let _ = session.logout();
+                }
                 res
             }
         }
@@ -209,12 +215,12 @@ fn list_folders_session<T: Read + Write>(session: &mut Session<T>) -> Result<Vec
         // IMAP 非 ASCII 文件夹名用 modified-UTF-7 编码,解码成可读中文(如"收件箱")
         let display_name = decode_utf7(&folder_name);
         let flags: Vec<String> = name.attributes().iter().map(attr_to_string).collect();
-        let selectable = !name
-            .attributes()
-            .iter()
-            .any(|a| matches!(a, NameAttribute::NoSelect));
+        // QQ 等服务器发送 \\NoSelect(大写 S),imap crate 只认小写 \\Noselect,
+        // 会把 NoSelect 文件夹误判为可选,导致对父文件夹发 STATUS 收到空属性列表
+        // '* STATUS xxx ()' 而触发 imap crate 的 tag 断言 panic。这里大小写不敏感判断。
+        let selectable = !name.attributes().iter().any(attr_is_noselect);
         let (total, unread) = if selectable {
-            folder_counts(session, &full_name)
+            folder_counts(session, &full_name)?
         } else {
             (0, 0)
         };
@@ -571,23 +577,28 @@ fn append_draft_session<T: Read + Write>(session: &mut Session<T>, raw: &[u8]) -
 
 // ── 内部辅助 ──
 
-fn folder_counts<T: Read + Write>(session: &mut Session<T>, folder: &str) -> (i64, i64) {
+fn folder_counts<T: Read + Write>(
+    session: &mut Session<T>,
+    folder: &str,
+) -> Result<(i64, i64), Error> {
     let mut total = 0i64;
     let mut unread = 0i64;
-    if let Ok(_mb) = session.status(folder, "(MESSAGES UNSEEN)") {
-        while let Ok(resp) = session.unsolicited_responses.try_recv() {
-            if let UnsolicitedResponse::Status { attributes, .. } = resp {
-                for attr in attributes {
-                    match attr {
-                        StatusAttribute::Messages(n) => total = n as i64,
-                        StatusAttribute::Unseen(n) => unread = n as i64,
-                        _ => {}
-                    }
+    // STATUS 一旦失败(如服务器返回无法解析的响应),连接流已错位,
+    // 必须立刻终止整个操作并丢弃连接,绝不能在错位的流上继续发命令
+    // (否则下一条命令会读到上一条命令残留的 tagged 响应,触发 crate 内部断言 panic)。
+    let _mb = session.status(folder, "(MESSAGES UNSEEN)").map_err(Error::Imap)?;
+    while let Ok(resp) = session.unsolicited_responses.try_recv() {
+        if let UnsolicitedResponse::Status { attributes, .. } = resp {
+            for attr in attributes {
+                match attr {
+                    StatusAttribute::Messages(n) => total = n as i64,
+                    StatusAttribute::Unseen(n) => unread = n as i64,
+                    _ => {}
                 }
             }
         }
     }
-    (total, unread)
+    Ok((total, unread))
 }
 
 fn find_folder<T: Read + Write>(session: &mut Session<T>, flag: &str) -> Option<String> {
@@ -604,6 +615,16 @@ fn find_folder<T: Read + Write>(session: &mut Session<T>, flag: &str) -> Option<
 fn attr_has_flag(a: &NameAttribute, flag: &str) -> bool {
     match a {
         NameAttribute::Custom(s) => s.eq_ignore_ascii_case(flag),
+        _ => false,
+    }
+}
+
+/// 判断文件夹是否 \\NoSelect:imap crate 的 NameAttribute::NoSelect 只匹配
+/// 小写 \\Noselect,而 QQ 发的是 \\NoSelect,会落到 Custom 里,必须大小写不敏感。
+fn attr_is_noselect(a: &NameAttribute) -> bool {
+    match a {
+        NameAttribute::NoSelect => true,
+        NameAttribute::Custom(s) => s.eq_ignore_ascii_case("\\NoSelect"),
         _ => false,
     }
 }
